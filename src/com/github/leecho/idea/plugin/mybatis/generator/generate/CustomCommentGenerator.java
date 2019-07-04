@@ -55,7 +55,18 @@ public class CustomCommentGenerator extends DbRemarksCommentGenerator {
     }
     @Override
     public void addClassComment(InnerClass innerClass, IntrospectedTable introspectedTable) {
-
+        innerClass.addJavaDocLine("/**");
+        innerClass.addJavaDocLine(" * Create with Intellij IDEA" );
+        innerClass.addJavaDocLine(" * @ClassName: " + introspectedTable.getFullyQualifiedTable().getDomainObjectName());
+        innerClass.addJavaDocLine(" * @Description: TODO");
+        innerClass.addJavaDocLine(" * @Date:  " );
+        innerClass.addJavaDocLine(" * @Author: ");
+        innerClass.addJavaDocLine(" * @Table: " + introspectedTable.getFullyQualifiedTable().getIntrospectedTableName());
+        innerClass.addJavaDocLine(" * @Version: 1.0.0");
+        innerClass.addJavaDocLine(" */");
+        if (this.isAnnotations) {
+            innerClass.addAnnotation("@Table(name=\"" + introspectedTable.getFullyQualifiedTableNameAtRuntime() + "\")");
+        }
     }
     @Override
     public void addModelClassComment(TopLevelClass topLevelClass, IntrospectedTable introspectedTable) {

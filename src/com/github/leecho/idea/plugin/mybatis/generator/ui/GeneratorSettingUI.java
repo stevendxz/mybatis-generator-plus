@@ -81,10 +81,39 @@ public class GeneratorSettingUI extends JDialog {
 
         this.initPathPanel();
         this.initPostfixPanel();
+        this.initCustomCommentPanel();
         this.initPackagePanel();
         this.initOptionsPanel();
         this.initClearCachePanel();
        this.reset();
+    }
+
+    private void initCustomCommentPanel() {
+
+        // 作者
+        JPanel authorPanel = new JPanel();
+        authorPanel.setLayout(new BoxLayout(authorPanel, BoxLayout.X_AXIS));
+        JBLabel authorLabel = new JBLabel("Author:");
+        authorLabel.setPreferredSize(new Dimension(200, 20));
+        authorPanel.add(authorLabel);
+        authorPanel.add(tablePrefixField);
+
+        // 版本
+        JPanel versionPanel = new JPanel();
+        versionPanel.setLayout(new BoxLayout(versionPanel, BoxLayout.X_AXIS));
+        JBLabel versionLabel = new JBLabel("Vesion:");
+        versionLabel.setPreferredSize(new Dimension(200, 20));
+        versionPanel.add(versionLabel);
+        versionPanel.add(modelPostfixField);
+
+        JPanel postfixPanel = new JPanel();
+        postfixPanel.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
+        TitledSeparator separator2 = new TitledSeparator();
+        separator2.setText("Comment");
+        postfixPanel.add(authorPanel);
+        postfixPanel.add(versionPanel);
+        contentPanel.add(separator2);
+        contentPanel.add(postfixPanel);
     }
 
     private void initOptionsPanel() {
