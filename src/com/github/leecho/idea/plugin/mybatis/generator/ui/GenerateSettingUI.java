@@ -44,6 +44,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -100,6 +101,9 @@ public class GenerateSettingUI extends DialogWrapper {
     private JCheckBox lombokBuilderAnnotationBox = new JCheckBox("Lombok Builder");
     private JCheckBox swaggerAnnotationBox = new JCheckBox("Swagger Model");
     private JBTabbedPane tabpanel = new JBTabbedPane();
+    private JTextField authorField = new JBTextField(20);
+    private JTextField versionField = new JBTextField(20);
+    private JTextField descriptionField = new JBTextField(20);
 
 
     public GenerateSettingUI(AnActionEvent anActionEvent) {
@@ -173,6 +177,9 @@ public class GenerateSettingUI extends DialogWrapper {
             tableConfig.setLombokBuilderAnnotation(globalConfig.isLombokBuilderAnnotation());
             tableConfig.setSwaggerAnnotation(globalConfig.isSwaggerAnnotation());
             tableConfig.setPrimaryKey(primaryKey);
+
+            tableConfig.setAuthor(globalConfig.getAuthor());
+            tableConfig.setVersion(globalConfig.getVersion());
         }
         VerticalFlowLayout layoutManager = new VerticalFlowLayout(VerticalFlowLayout.TOP);
         layoutManager.setHgap(0);
@@ -469,7 +476,7 @@ public class GenerateSettingUI extends DialogWrapper {
             @Override
             public void keyReleased(KeyEvent e) {
                 String entityName = StringUtils.dbStringToCamelStyle(tableNameField.getText());
-                domainNameField.setText(entityName);
+                domainNameField.setText(getDomainName(entityName));
                 mapperNameField.setText(getMapperName(entityName));
                 exampleNameField.setText(getExampleName(entityName));
             }
@@ -516,7 +523,7 @@ public class GenerateSettingUI extends DialogWrapper {
         mapperNamePanel.setLayout(new BoxLayout(mapperNamePanel, BoxLayout.X_AXIS));
         JLabel mapperNameLabel = new JLabel("Mapper Name:");
         mapperNameLabel.setPreferredSize(new Dimension(150, 10));
-        mapperNameLabel.setLabelFor(domainNameField);
+        mapperNameLabel.setLabelFor(mapperNameField);
         mapperNamePanel.add(mapperNameLabel);
         mapperNamePanel.add(mapperNameField);
         if (psiElements.length > 1) {
@@ -532,7 +539,7 @@ public class GenerateSettingUI extends DialogWrapper {
         exampleNamePanel.setLayout(new BoxLayout(exampleNamePanel, BoxLayout.X_AXIS));
         JLabel exampleNameLabel = new JLabel("Example Name:");
         exampleNameLabel.setPreferredSize(new Dimension(150, 10));
-        exampleNameLabel.setLabelFor(domainNameField);
+        exampleNameLabel.setLabelFor(exampleNameField);
         exampleNamePanel.add(exampleNameLabel);
         exampleNamePanel.add(exampleNameField);
         if (psiElements.length > 1) {
@@ -721,8 +728,70 @@ public class GenerateSettingUI extends DialogWrapper {
         xmlPackagePanel.add(xmlPackageLabel);
         xmlPackagePanel.add(xmlPackageField);
 
+        // 自定义注释
+        JPanel authorPanel = new JPanel();
+        authorPanel.setLayout(new BoxLayout(authorPanel, BoxLayout.X_AXIS));
+        JLabel authorLabel = new JLabel("Author:");
+        authorLabel.setPreferredSize(new Dimension(150, 10));
+        authorLabel.setLabelFor(authorField);
+        authorPanel.add(authorLabel);
+        authorPanel.add(authorField);
+        if (psiElements.length > 1) {
+            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getAuthor())) {
+                authorField.addFocusListener(new JTextFieldHintListener(authorField, "eg:DbTable" + tableConfig.getAuthor()));
+            } else {
+                authorField.addFocusListener(new JTextFieldHintListener(authorField, "eg:DbTable" + System.getProperty("user.name")));
+            }
+        } else {
+            authorField.setText(tableConfig.getAuthor());
+        }
+
+        JPanel descriptionPanel = new JPanel();
+        descriptionPanel.setLayout(new BoxLayout(descriptionPanel, BoxLayout.X_AXIS));
+        JLabel descriptionLabel = new JLabel("Description:");
+        descriptionLabel.setPreferredSize(new Dimension(150, 10));
+        descriptionLabel.setLabelFor(descriptionField);
+        descriptionPanel.add(descriptionLabel);
+        descriptionPanel.add(descriptionField);
+        if (psiElements.length > 1) {
+            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getDescription())) {
+                descriptionField.addFocusListener(new JTextFieldHintListener(descriptionField, "eg:DbTable" + tableConfig.getDescription()));
+            } else {
+                descriptionField.addFocusListener(new JTextFieldHintListener(descriptionField, "eg:DbTable" + "TODO"));
+            }
+        } else {
+            descriptionField.setText(tableConfig.getDescription());
+        }
+
+        JPanel versionPanel = new JPanel();
+        versionPanel.setLayout(new BoxLayout(versionPanel, BoxLayout.X_AXIS));
+        JLabel versionLabel = new JLabel("Version:");
+        versionLabel.setPreferredSize(new Dimension(150, 10));
+        versionLabel.setLabelFor(versionField);
+        versionPanel.add(versionLabel);
+        versionPanel.add(versionField);
+        if (psiElements.length > 1) {
+            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getVersion())) {
+                versionField.addFocusListener(new JTextFieldHintListener(versionField, "eg:DbTable" + tableConfig.getVersion()));
+            } else {
+                versionField.addFocusListener(new JTextFieldHintListener(versionField, "eg:DbTable" + "1.0.0"));
+            }
+        } else {
+            versionField.setText(tableConfig.getVersion());
+        }
+
         JPanel generalPanel = new JPanel();
         generalPanel.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
+        generalPanel.add(new TitledSeparator("Comment"));
+
+        JPanel commentPanel = new JPanel();
+        commentPanel.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
+
+        commentPanel.add(authorPanel);
+        commentPanel.add(versionPanel);
+        commentPanel.add(descriptionPanel);
+        generalPanel.add(commentPanel);
+        
         generalPanel.add(new TitledSeparator("Domain"));
 
         JPanel domainPanel = new JPanel();
@@ -789,6 +858,10 @@ public class GenerateSettingUI extends DialogWrapper {
         tableConfig.setSwaggerAnnotation(swaggerAnnotationBox.getSelectedObjects() != null);
         tableConfig.setSourcePath(this.tableConfig.getSourcePath());
         tableConfig.setResourcePath(this.tableConfig.getResourcePath());
+
+        tableConfig.setAuthor(authorField.getText());
+        tableConfig.setVersion(versionField.getText());
+        tableConfig.setDescription(descriptionField.getText());
 
         new MyBatisGenerateCommand(tableConfig).execute(project, connectionConfig);
 

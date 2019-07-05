@@ -18,6 +18,24 @@ public class GlobalConfig {
 	private String xmlPackage;
 
 	private String tablePrefix;
+	private String author;
+	private String version;
+
+	public String getAuthor() {
+		return author;
+	}
+
+	public void setAuthor(String author) {
+		this.author = author;
+	}
+
+	public String getVersion() {
+		return version;
+	}
+
+	public void setVersion(String version) {
+		this.version = version;
+	}
 
 	/**
 	 * 是否分页

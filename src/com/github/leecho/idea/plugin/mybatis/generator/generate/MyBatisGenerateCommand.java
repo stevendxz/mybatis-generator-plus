@@ -460,32 +460,13 @@ public class MyBatisGenerateCommand {
 	}
 
 	/**
-	 * 生成类注释配置
-	 *
-	 * @return
-	 */
-	private CommentGeneratorConfiguration buildClassCommentConfig() {
-		CommentGeneratorConfiguration commentConfig = new CommentGeneratorConfiguration();
-		commentConfig.setConfigurationType(CustomCommentGenerator.class.getName());
-
-		if (tableConfig.isComment()) {
-			commentConfig.addProperty("columnRemarks", "false");
-		}
-		if (tableConfig.isAnnotation()) {
-			commentConfig.addProperty("annotations", "false");
-		}
-
-		return commentConfig;
-	}
-
-	/**
 	 * 生成注释配置
 	 *
 	 * @return
 	 */
 	private CommentGeneratorConfiguration buildCommentConfig() {
 		CommentGeneratorConfiguration commentConfig = new CommentGeneratorConfiguration();
-		commentConfig.setConfigurationType(DbRemarksCommentGenerator.class.getName());
+		commentConfig.setConfigurationType(CustomCommentGenerator.class.getName());
 
 		if (tableConfig.isComment()) {
 			commentConfig.addProperty("columnRemarks", "true");
@@ -493,6 +474,10 @@ public class MyBatisGenerateCommand {
 		if (tableConfig.isAnnotation()) {
 			commentConfig.addProperty("annotations", "true");
 		}
+
+		commentConfig.addProperty("author", tableConfig.getAuthor());
+		commentConfig.addProperty("version", tableConfig.getVersion());
+		commentConfig.addProperty("description", tableConfig.getDescription());
 
 		return commentConfig;
 	}

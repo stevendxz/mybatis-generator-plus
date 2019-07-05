@@ -42,6 +42,8 @@ public class GeneratorSettingUI extends JDialog {
     private JTextField resourcePathField = new JTextField();
 
     private JTextField tablePrefixField = new JTextField(10);
+    private JTextField authorField = new JTextField(20);
+    private JTextField versionField = new JTextField(20);
 
     private JTextField modelPostfixField = new JTextField(10);
     private JTextField mapperPostfixField = new JTextField(10);
@@ -96,7 +98,7 @@ public class GeneratorSettingUI extends JDialog {
         JBLabel authorLabel = new JBLabel("Author:");
         authorLabel.setPreferredSize(new Dimension(200, 20));
         authorPanel.add(authorLabel);
-        authorPanel.add(tablePrefixField);
+        authorPanel.add(authorField);
 
         // 版本
         JPanel versionPanel = new JPanel();
@@ -104,16 +106,16 @@ public class GeneratorSettingUI extends JDialog {
         JBLabel versionLabel = new JBLabel("Vesion:");
         versionLabel.setPreferredSize(new Dimension(200, 20));
         versionPanel.add(versionLabel);
-        versionPanel.add(modelPostfixField);
+        versionPanel.add(versionField);
 
-        JPanel postfixPanel = new JPanel();
-        postfixPanel.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
-        TitledSeparator separator2 = new TitledSeparator();
-        separator2.setText("Comment");
-        postfixPanel.add(authorPanel);
-        postfixPanel.add(versionPanel);
-        contentPanel.add(separator2);
-        contentPanel.add(postfixPanel);
+        JPanel commentPanel = new JPanel();
+        commentPanel.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
+        TitledSeparator separator3 = new TitledSeparator();
+        separator3.setText("Comment");
+        commentPanel.add(authorPanel);
+        commentPanel.add(versionPanel);
+        contentPanel.add(separator3);
+        contentPanel.add(commentPanel);
     }
 
     private void initOptionsPanel() {
@@ -440,6 +442,8 @@ public class GeneratorSettingUI extends JDialog {
         modified |= (this.lombokAnnotationBox.getSelectedObjects() != null) == (config.getGlobalConfig().isLombokAnnotation());
         modified |= (this.lombokBuilderAnnotationBox.getSelectedObjects() != null) == (config.getGlobalConfig().isLombokBuilderAnnotation());
         modified |= (this.swaggerAnnotationBox.getSelectedObjects() != null) == (config.getGlobalConfig().isSwaggerAnnotation());
+        modified |= !this.authorField.getText().equals(config.getGlobalConfig().getAuthor());
+        modified |= !this.versionField.getText().equals(config.getGlobalConfig().getVersion());
         return modified;
     }
 
@@ -477,6 +481,8 @@ public class GeneratorSettingUI extends JDialog {
 
         globalConfig.setSourcePath(sourcePathField.getText());
         globalConfig.setResourcePath(resourcePathField.getText());
+        globalConfig.setAuthor(authorField.getText());
+        globalConfig.setVersion(versionField.getText());
 
         this.config.setGlobalConfig(globalConfig);
 
@@ -517,6 +523,9 @@ public class GeneratorSettingUI extends JDialog {
         lombokAnnotationBox.setSelected(globalConfig.isLombokAnnotation());
         lombokBuilderAnnotationBox.setSelected(globalConfig.isLombokBuilderAnnotation());
         swaggerAnnotationBox.setSelected(globalConfig.isSwaggerAnnotation());
+
+        authorField.setText(globalConfig.getAuthor());
+        versionField.setText(globalConfig.getVersion());
 
     }
 

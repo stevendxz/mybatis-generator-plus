@@ -72,6 +72,34 @@ public class TableConfig {
 	private String xmlPackage;
 	private String xmlModuleRootPath;
 
+	private String author;
+	private String description;
+	private String version;
+
+	public String getAuthor() {
+		return author;
+	}
+
+	public void setAuthor(String author) {
+		this.author = author;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public String getVersion() {
+		return version;
+	}
+
+	public void setVersion(String version) {
+		this.version = version;
+	}
+
 	private Map<String, ColumnSetting> columnSettings = new HashMap<>();
 	/**
 	 * 是否分页

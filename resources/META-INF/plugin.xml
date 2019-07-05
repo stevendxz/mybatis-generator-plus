@@ -1,27 +1,10 @@
 <idea-plugin>
   <id>com.github.leecho.idea.plugin.mybatis.generator</id>
   <name>MyBatis Generator Plus</name>
-  <version>1.5.1</version>
+  <version>1.5.5</version>
   <vendor email="leecho571@gmail.com" url="https://github.com/leecho/mybatis-generator-plus">Leecho</vendor>
 
   <description>
-    <![CDATA[
-   <ul>
-       <li>
-            Integrate with the Idea Database tool<br/>
-            Support mapper class file merge<br/>
-            Support mapper xml file merge<br/>
-            Support customize postfix for domain class<br/>
-            Support customize postfix for mapper class<br/>
-            Support customize postfix for example class<br/>
-            Support table prefix for domain class<br/>
-            Support customize setting for column<br/>
-            Support for IDEA the latest version.<br/>
-            Optimize Mysql8 database connection.<br/>
-            Add MariaDB support
-        </li>
-   </ul>
-    ]]>
     <![CDATA[
    <ul>
        <li>
@@ -38,21 +21,12 @@
             支持自定义Domain模块根目录(Example根目录同Domain目录)<br/>
             支持自定义Mapper模块根目录<br/>
             支持自定义Mapper XML模块根目录<br/>
+            支持自定义Domain实体类注释
+            添加方法注释
         </li>
    </ul>
     ]]>
     <![CDATA[
-   <ul>
-        <li>Use in idea database tool，right click table to generate mybatis files (include:mapper、example、domain、xml).Currently supported databases: Mysql, Oracle. To be verified: Mysql 8, Postgre SQL and SQL Server</li>
-        <li>Step1: Connecting to Your Database: <kbd>View</kbd> > <kbd>Tool Windows</kbd> > <kbd>Database</kbd>.</li>
-        <li>Step2: Select one tablesRight Click and select <kbd>Generate MyBatis Code</kbd> to open generator main UI.</li>
-        <li>Step3: Check configuration in main ui,click <kbd>ok</kbd>.</li>
-        <li>Step4: Provide account and password for the first time.</li>
-        <li>Step5: Generate work finish,check files and it can be use.</li>
-   <li>Setting: <kbd>Tools</kbd> > <kbd>MyBatis Generator Plus</kbd> set custom default configuration，If not, use the program default configuration.</li>
-   <li>More tutorial please visit <a href="https://github.com/leecho/mybatis-generator-plus">here </a></li>
-   </ul>
-
    <ul>
         <li>在idea的database工具中使用，右击选择表生成mybatis相关的代码。目前已支持的数据库：Mysql、Mysql8(可能需要设置数据库时区time_zone = '+8:00')、Oracle、MariaDB。待验证：PostgreSQL与SQL Server </li>
         <li>Step1: 连接Database: <kbd>View</kbd> > <kbd>Tool Windows</kbd> > <kbd>Database</kbd>。</li>
