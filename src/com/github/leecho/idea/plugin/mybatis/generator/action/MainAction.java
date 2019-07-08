@@ -1,5 +1,6 @@
 package com.github.leecho.idea.plugin.mybatis.generator.action;
 
+import com.github.leecho.idea.plugin.mybatis.generator.ui.GenerateSettingMultiTablesUI;
 import com.github.leecho.idea.plugin.mybatis.generator.ui.GenerateSettingUI;
 import com.intellij.database.psi.DbTable;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -27,18 +28,27 @@ public class MainAction extends AnAction {
 			Messages.showMessageDialog("Please select one or more tables", "Mybatis Generator Plus", Messages.getWarningIcon());
 			return;
 		}
-		if (psiElements.length > 1) {
-			Messages.showMessageDialog("Please select only one table", "Mybatis Generator Plus", Messages.getWarningIcon());
-			return;
-		}
+		// 只能单一表转换
+//		if (psiElements.length > 1) {
+//			Messages.showMessageDialog("Please select only one table", "Mybatis Generator Plus", Messages.getWarningIcon());
+//			return;
+//		}
 		for (PsiElement psiElement : psiElements) {
 			if (!(psiElement instanceof DbTable)) {
 				Messages.showMessageDialog("Please select one or more tables", "Mybatis Generator Plus", Messages.getWarningIcon());
 				return;
 			}
 		}
-		GenerateSettingUI ui = new GenerateSettingUI(e);
-		ui.show();
+
+		if (psiElements.length > 1) {
+			// 多个表转换时使用 GenerateSettingMultiTablesUI 界面
+			GenerateSettingMultiTablesUI ui = new GenerateSettingMultiTablesUI(e);
+			ui.show();
+		} else {
+			// 一个表转换时使用 GenerateSettingUI 界面
+			GenerateSettingUI ui = new GenerateSettingUI(e);
+			ui.show();
+		}
 		/*if (ui.showAndGet()) {
 			ui.generate();
 		}*/
