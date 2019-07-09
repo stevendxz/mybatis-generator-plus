@@ -909,15 +909,15 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
             @Override
             public void actionPerformed(ActionEvent e) {
                 DefaultListModel rightListModel = (DefaultListModel) rightList.getModel();
-                for(String sel:(List<String>)leftList.getSelectedValuesList()) {
-                    rightListModel.addElement(sel);
+                for(Object obj:leftList.getSelectedValuesList()) {
+                    rightListModel.addElement(obj);
                 }
 
                 rightList.setModel(rightListModel);
 
                 DefaultListModel leftListModel = (DefaultListModel) leftList.getModel();
-                for(String sel:(List<String>)leftList.getSelectedValuesList()) {
-                    leftListModel.removeElement(sel);
+                for(Object obj:leftList.getSelectedValuesList()) {
+                    leftListModel.removeElement(obj);
                 }
                 leftList.setModel(leftListModel);
             }
@@ -940,14 +940,14 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
             @Override
             public void actionPerformed(ActionEvent e) {
                 DefaultListModel rightListModel = (DefaultListModel) rightList.getModel();
-                for(String sel:(List<String>)rightList.getSelectedValuesList()) {
-                    rightListModel.removeElement(sel);
+                for(Object obj:rightList.getSelectedValuesList()) {
+                    rightListModel.removeElement(obj);
                 }
                 rightList.setModel(rightListModel);
 
                 DefaultListModel leftListModel = (DefaultListModel) leftList.getModel();
-                for(String sel:(List<String>)rightList.getSelectedValuesList()) {
-                    leftListModel.addElement(sel);
+                for(Object obj:rightList.getSelectedValuesList()) {
+                    leftListModel.addElement(obj);
                 }
                 leftList.setModel(leftListModel);
             }
@@ -955,8 +955,8 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
 
         buttonsPanel.add(addAllButton);
         buttonsPanel.add(addButton);
-        buttonsPanel.add(clearAllButton);
         buttonsPanel.add(clearButton);
+        buttonsPanel.add(clearAllButton);
 
         Box vbox = Box.createHorizontalBox();
         allTablePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
