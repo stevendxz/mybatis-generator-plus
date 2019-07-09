@@ -897,7 +897,7 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
             public void actionPerformed(ActionEvent e) {
                 DefaultListModel leftListModel = (DefaultListModel) leftList.getModel();
                 DefaultListModel rightListModel = (DefaultListModel) rightList.getModel();
-                for(Object obj:leftListModel.toArray()) {
+                for(Object obj : leftListModel.toArray()) {
                     rightListModel.addElement(obj);
                 }
                 rightList.setModel(rightListModel);
@@ -909,14 +909,14 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
             @Override
             public void actionPerformed(ActionEvent e) {
                 DefaultListModel rightListModel = (DefaultListModel) rightList.getModel();
-                for(Object obj:leftList.getSelectedValuesList()) {
+                for(Object obj : leftList.getSelectedValuesList()) {
                     rightListModel.addElement(obj);
                 }
 
                 rightList.setModel(rightListModel);
 
                 DefaultListModel leftListModel = (DefaultListModel) leftList.getModel();
-                for(Object obj:leftList.getSelectedValuesList()) {
+                for(Object obj : leftList.getSelectedValuesList()) {
                     leftListModel.removeElement(obj);
                 }
                 leftList.setModel(leftListModel);
@@ -928,7 +928,7 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
             public void actionPerformed(ActionEvent e) {
                 DefaultListModel leftListModel = (DefaultListModel) leftList.getModel();
                 DefaultListModel rightListModel = (DefaultListModel) rightList.getModel();
-                for(Object obj:rightListModel.toArray()) {
+                for(Object obj : rightListModel.toArray()) {
                     leftListModel.addElement(obj);
                 }
                 leftList.setModel(leftListModel);
@@ -940,13 +940,13 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
             @Override
             public void actionPerformed(ActionEvent e) {
                 DefaultListModel rightListModel = (DefaultListModel) rightList.getModel();
-                for(Object obj:rightList.getSelectedValuesList()) {
+                for(Object obj : rightList.getSelectedValuesList()) {
                     rightListModel.removeElement(obj);
                 }
                 rightList.setModel(rightListModel);
 
                 DefaultListModel leftListModel = (DefaultListModel) leftList.getModel();
-                for(Object obj:rightList.getSelectedValuesList()) {
+                for(Object obj : rightList.getSelectedValuesList()) {
                     leftListModel.addElement(obj);
                 }
                 leftList.setModel(leftListModel);
