@@ -27,23 +27,27 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiPackage;
 import com.intellij.ui.EditorTextFieldWithBrowseButton;
 import com.intellij.ui.TitledSeparator;
-import com.intellij.ui.components.JBLabel;
-import com.intellij.ui.components.JBPanel;
-import com.intellij.ui.components.JBTabbedPane;
-import com.intellij.ui.components.JBTextField;
+import com.intellij.ui.components.*;
+import com.intellij.ui.components.panels.HorizontalLayout;
 import com.intellij.util.ui.JBUI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.border.TitledBorder;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.plaf.BorderUIResource;
+import javax.swing.plaf.PanelUI;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -100,10 +104,29 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
     private JCheckBox lombokBuilderAnnotationBox = new JCheckBox("Lombok Builder");
     private JCheckBox swaggerAnnotationBox = new JCheckBox("Swagger Model");
     private JBTabbedPane tabpanel = new JBTabbedPane();
+
     private JTextField authorField = new JBTextField(20);
     private JTextField versionField = new JBTextField(20);
     private JTextField descriptionField = new JBTextField(20);
 
+    private JTextField modelPostfixField = new JTextField(20);
+    private JTextField mapperPostfixField = new JTextField(20);
+    private JTextField examplePostfixField = new JTextField(20);
+    private JTextField servicePostfixField = new JTextField(20);
+    private JTextField serviceInterfacePostfixField = new JTextField(20);
+    private JPanel tablePanel = new JPanel();
+    private JPanel allTablePanel = new JPanel();
+    private JPanel selectedTablePanel = new JPanel();
+    private JSplitPane jSplitPane = new JSplitPane();
+    private JBList leftList = new JBList();
+    private JBList rightList = new JBList();
+    private JCheckBox useServiceBox = new JCheckBox("Use Service");
+    private TextFieldWithBrowseButton serviceModuleRootField = new TextFieldWithBrowseButton();
+    private EditorTextFieldWithBrowseButton servicePackageField;
+    private EditorTextFieldWithBrowseButton serviceInterfacePackageField;
+    private DefaultListModel listModel = new DefaultListModel();
+
+    private List<TableInfo> allTablesList = new ArrayList<>();
 
     public GenerateSettingMultiTablesUI(AnActionEvent anActionEvent) {
         super(anActionEvent.getData(PlatformDataKeys.PROJECT));
@@ -120,26 +143,14 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         //设置大小
         pack();
         setModal(true);
-
-        PsiElement psiElement = psiElements[0];
-        TableInfo tableInfo = new TableInfo((DbTable) psiElement);
-        String tableName = tableInfo.getTableName();
-        String realTableName;
-        if (globalConfig.getTablePrefix() != null && tableName.startsWith(globalConfig.getTablePrefix())) {
-            realTableName = tableName.substring(globalConfig.getTablePrefix().length());
-        } else {
-            realTableName = tableName;
-        }
-        String entityName = StringUtils.dbStringToCamelStyle(realTableName);
-        String primaryKey = "";
-        if (tableInfo.getPrimaryKeys().size() > 0) {
-            primaryKey = tableInfo.getPrimaryKeys().get(0);
+        if(psiElements.length > 0) {
+            for(int i = 0; i < psiElements.length; i++) {
+                TableInfo tableInfo = new TableInfo((DbTable) psiElements[i]);
+                allTablesList.add(tableInfo);
+                listModel.addElement(tableInfo.getTableName());
+            }
         }
 
-        //单表时，优先使用已经存在的配置
-        if (historyConfigList != null) {
-            tableConfig = historyConfigList.get(tableName);
-        }
         if (tableConfig == null) {
             //初始化配置
             tableConfig = new TableConfig();
@@ -175,7 +186,7 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
             tableConfig.setLombokAnnotation(globalConfig.isLombokAnnotation());
             tableConfig.setLombokBuilderAnnotation(globalConfig.isLombokBuilderAnnotation());
             tableConfig.setSwaggerAnnotation(globalConfig.isSwaggerAnnotation());
-            tableConfig.setPrimaryKey(primaryKey);
+//            tableConfig.setPrimaryKey(primaryKey);
 
             tableConfig.setAuthor(globalConfig.getAuthor());
             tableConfig.setVersion(globalConfig.getVersion());
@@ -184,10 +195,11 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         layoutManager.setHgap(0);
         layoutManager.setVgap(0);
         contentPane.setLayout(layoutManager);
-        this.initHeader(tableName, primaryKey);
-        this.initGeneralPanel(entityName);
+        this.initHeader();
+        this.initTableListPanel();
+        this.initGeneralPanel();
         this.initOptionsPanel();
-        tabpanel.add(new ColumnTablePanel(tableConfig, tableInfo));
+//        tabpanel.add(new ColumnTablePanel(tableConfig, tableInfo));
         contentPane.add(tabpanel);
         tabpanel.setUI(new GenerateSettingTabUI());
         contentPane.setBorder(JBUI.Borders.empty());
@@ -431,7 +443,7 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
     /**
      * 初始化Package组件
      */
-    private void initHeader(String tableName, String primaryKey) {
+    private void initHeader() {
         JPanel headerPanel = new JBPanel<>();
         headerPanel.setBorder(JBUI.Borders.empty(0, 5));
         VerticalFlowLayout layout = new VerticalFlowLayout(VerticalFlowLayout.TOP);
@@ -457,7 +469,7 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         moduleRootPanel.add(moduleRootField);
 
         //Table
-        JPanel tableNamePanel = new JPanel();
+        /*JPanel tableNamePanel = new JPanel();
         tableNamePanel.setLayout(new BoxLayout(tableNamePanel, BoxLayout.X_AXIS));
         JLabel tableLabel = new JLabel("Table Name:");
         tableLabel.setLabelFor(tableNameField);
@@ -488,70 +500,103 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         primaryKeyLabel.setPreferredSize(new Dimension(150, 10));
         tableNamePanel.add(primaryKeyLabel);
         tableNamePanel.add(primaryKeyField);
-
         primaryKeyField.setText(primaryKey);
         primaryKeyField.setEditable(false);
+        */
         headerPanel.add(moduleRootPanel);
-        headerPanel.add(tableNamePanel);
-        headerPanel.add(primaryPanel);
+//        headerPanel.add(tableNamePanel);
+//        headerPanel.add(primaryPanel);
         contentPane.add(headerPanel);
     }
 
-    private void initGeneralPanel(String modelName) {
-        JPanel domainNamePanel = new JPanel();
-        domainNamePanel.setLayout(new BoxLayout(domainNamePanel, BoxLayout.X_AXIS));
-        JLabel entityNameLabel = new JLabel("Model Name:");
-        entityNameLabel.setPreferredSize(new Dimension(150, 10));
-        domainNamePanel.add(entityNameLabel);
-        domainNamePanel.add(domainNameField);
-        if (psiElements.length > 1) {
-            domainNameField.addFocusListener(new JTextFieldHintListener(domainNameField, "eg:DbTable"));
-        } else {
-            domainNameField.setText(getDomainName(modelName));
-        }
-        domainNameField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                mapperNameField.setText(getMapperName(modelName));
-                exampleNameField.setText(getExampleName(modelName));
-            }
-        });
+    private void initGeneralPanel() {
+        // 实体类后缀
+        JPanel modelPostfixPanel = new JPanel();
+        modelPostfixPanel.setLayout(new BoxLayout(modelPostfixPanel, BoxLayout.X_AXIS));
+        JBLabel modelPostfixLabel = new JBLabel("Model Postfix:");
+        modelPostfixLabel.setPreferredSize(new Dimension(200, 20));
+        modelPostfixPanel.add(modelPostfixLabel);
+        modelPostfixPanel.add(modelPostfixField);
 
-        //MapperName
-        JPanel mapperNamePanel = new JPanel();
-        mapperNamePanel.setLayout(new BoxLayout(mapperNamePanel, BoxLayout.X_AXIS));
-        JLabel mapperNameLabel = new JLabel("Mapper Name:");
-        mapperNameLabel.setPreferredSize(new Dimension(150, 10));
-        mapperNameLabel.setLabelFor(mapperNameField);
-        mapperNamePanel.add(mapperNameLabel);
-        mapperNamePanel.add(mapperNameField);
-        if (psiElements.length > 1) {
-            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getMapperPostfix())) {
-                mapperNameField.addFocusListener(new JTextFieldHintListener(mapperNameField, "eg:DbTable" + tableConfig.getMapperPostfix()));
-            } else {
-                mapperNameField.addFocusListener(new JTextFieldHintListener(mapperNameField, "eg:DbTable" + "Mapper"));
-            }
-        } else {
-            mapperNameField.setText(getMapperName(modelName));
-        }
+        // mapper后缀设置
+        JPanel mapperPostfixPanel = new JPanel();
+        mapperPostfixPanel.setLayout(new BoxLayout(mapperPostfixPanel, BoxLayout.X_AXIS));
+        JBLabel mapperPostfixLabel = new JBLabel("Mapper Postfix:");
+        mapperPostfixLabel.setPreferredSize(new Dimension(200, 20));
+        mapperPostfixPanel.add(mapperPostfixLabel);
+        mapperPostfixPanel.add(mapperPostfixField);
 
-        exampleNamePanel.setLayout(new BoxLayout(exampleNamePanel, BoxLayout.X_AXIS));
-        JLabel exampleNameLabel = new JLabel("Example Name:");
-        exampleNameLabel.setPreferredSize(new Dimension(150, 10));
-        exampleNameLabel.setLabelFor(exampleNameField);
-        exampleNamePanel.add(exampleNameLabel);
-        exampleNamePanel.add(exampleNameField);
-        if (psiElements.length > 1) {
-            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getExamplePostfix())) {
-                exampleNameField.addFocusListener(new JTextFieldHintListener(exampleNameField, "eg:DbTable" + tableConfig.getExamplePostfix()));
-            } else {
-                exampleNameField.addFocusListener(new JTextFieldHintListener(exampleNameField, "eg:DbTable" + "Example"));
-            }
-        } else {
-            exampleNameField.setText(getExampleName(modelName));
-        }
+        // example类 后缀设置
+        JPanel examplePostfixPanel = new JPanel();
+        examplePostfixPanel.setLayout(new BoxLayout(examplePostfixPanel, BoxLayout.X_AXIS));
+        JBLabel examplePostfixLabel = new JBLabel("Example Postfix:");
+        examplePostfixLabel.setPreferredSize(new Dimension(200, 20));
+        examplePostfixPanel.add(examplePostfixLabel);
+        examplePostfixPanel.add(examplePostfixField);
+        examplePostfixPanel.setVisible(tableConfig.isUseExample());
 
-        exampleNamePanel.setVisible(tableConfig.isUseExample());
+        // example类 后缀设置
+//        JPanel servicePostfixPanel = new JPanel();
+//        servicePostfixPanel.setLayout(new BoxLayout(servicePostfixPanel, BoxLayout.X_AXIS));
+//        JBLabel servicePostfixLabel = new JBLabel("Service Postfix:");
+//        servicePostfixLabel.setPreferredSize(new Dimension(200, 20));
+//        servicePostfixPanel.add(servicePostfixLabel);
+//        servicePostfixPanel.add(servicePostfixField);
+
+//        JPanel domainNamePanel = new JPanel();
+//        domainNamePanel.setLayout(new BoxLayout(domainNamePanel, BoxLayout.X_AXIS));
+//        JLabel entityNameLabel = new JLabel("Model Postfix:");
+//        entityNameLabel.setPreferredSize(new Dimension(150, 10));
+//        domainNamePanel.add(entityNameLabel);
+//        domainNamePanel.add(domainNameField);
+//        if (psiElements.length > 1) {
+//            domainNameField.addFocusListener(new JTextFieldHintListener(domainNameField, "eg:DbTable"));
+//        } else {
+//            domainNameField.setText(getDomainName(modelName));
+//        }
+//        domainNameField.addKeyListener(new KeyAdapter() {
+//            @Override
+//            public void keyReleased(KeyEvent e) {
+//                mapperNameField.setText(getMapperName(modelName));
+//                exampleNameField.setText(getExampleName(modelName));
+//            }
+//        });
+//
+//        //MapperName
+//        JPanel mapperNamePanel = new JPanel();
+//        mapperNamePanel.setLayout(new BoxLayout(mapperNamePanel, BoxLayout.X_AXIS));
+//        JLabel mapperNameLabel = new JLabel("Mapper Postfix:");
+//        mapperNameLabel.setPreferredSize(new Dimension(150, 10));
+//        mapperNameLabel.setLabelFor(mapperNameField);
+//        mapperNamePanel.add(mapperNameLabel);
+//        mapperNamePanel.add(mapperNameField);
+//        if (psiElements.length > 1) {
+//            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getMapperPostfix())) {
+//                mapperNameField.addFocusListener(new JTextFieldHintListener(mapperNameField, "eg:DbTable" + tableConfig.getMapperPostfix()));
+//            } else {
+//                mapperNameField.addFocusListener(new JTextFieldHintListener(mapperNameField, "eg:DbTable" + "Mapper"));
+//            }
+//        } else {
+//            mapperNameField.setText(getMapperName(modelName));
+//        }
+//
+//        exampleNamePanel.setLayout(new BoxLayout(exampleNamePanel, BoxLayout.X_AXIS));
+//        JLabel exampleNameLabel = new JLabel("Example Postfix:");
+//        exampleNameLabel.setPreferredSize(new Dimension(150, 10));
+//        exampleNameLabel.setLabelFor(exampleNameField);
+//        exampleNamePanel.add(exampleNameLabel);
+//        exampleNamePanel.add(exampleNameField);
+//        if (psiElements.length > 1) {
+//            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getExamplePostfix())) {
+//                exampleNameField.addFocusListener(new JTextFieldHintListener(exampleNameField, "eg:DbTable" + tableConfig.getExamplePostfix()));
+//            } else {
+//                exampleNameField.addFocusListener(new JTextFieldHintListener(exampleNameField, "eg:DbTable" + "Example"));
+//            }
+//        } else {
+//            exampleNameField.setText(getExampleName(modelName));
+//        }
+//
+//        exampleNamePanel.setVisible(tableConfig.isUseExample());
 
 
         JPanel basePackagePanel = new JPanel();
@@ -791,14 +836,14 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         commentPanel.add(descriptionPanel);
         generalPanel.add(commentPanel);
         
-        generalPanel.add(new TitledSeparator("Domain"));
+        generalPanel.add(new TitledSeparator("Class Postfix"));
 
         JPanel domainPanel = new JPanel();
         domainPanel.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
 
-        domainPanel.add(domainNamePanel);
-        domainPanel.add(mapperNamePanel);
-        domainPanel.add(exampleNamePanel);
+        domainPanel.add(modelPostfixPanel);
+        domainPanel.add(mapperPostfixPanel);
+        domainPanel.add(examplePostfixPanel);
         generalPanel.add(domainPanel);
 
         generalPanel.add(new TitledSeparator("Package"));
@@ -817,6 +862,117 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         generalPanel.add(packagePanel);
         generalPanel.setName("General");
         tabpanel.add(generalPanel);
+    }
+
+    public void initTableListPanel() {
+        allTablePanel.setLayout(new BoxLayout(allTablePanel, BoxLayout.X_AXIS));
+        TitledBorder leftTitledBorder = BorderFactory.createTitledBorder("All Tables");
+        leftTitledBorder.setBorder(BorderFactory.createLineBorder(Color.gray, 2));
+        allTablePanel.setBorder(leftTitledBorder);
+
+        JPanel leftPanel = new JPanel();
+        leftList = new JBList();
+        leftList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        leftList.setModel(listModel);
+        leftPanel.add(leftList);
+        allTablePanel.add(leftPanel);
+
+        selectedTablePanel.setLayout(new BoxLayout(selectedTablePanel, BoxLayout.X_AXIS));
+        TitledBorder rightTitledBorder = BorderFactory.createTitledBorder("Selected Tables");
+        rightTitledBorder.setBorder(BorderFactory.createLineBorder(Color.gray, 2));
+        selectedTablePanel.setBorder(rightTitledBorder);
+
+        JPanel rightPanel = new JPanel();
+        rightList = new JBList();
+        rightList.setModel(new DefaultListModel());
+        rightPanel.add(rightList);
+        selectedTablePanel.add(rightPanel);
+
+        JPanel buttonsPanel = new JPanel();
+        buttonsPanel.setLayout(new BoxLayout(buttonsPanel, BoxLayout.Y_AXIS));
+        buttonsPanel.setPreferredSize(new Dimension(30, 0));
+        JButton addAllButton = new JButton(">>");
+        addAllButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                DefaultListModel leftListModel = (DefaultListModel) leftList.getModel();
+                DefaultListModel rightListModel = (DefaultListModel) rightList.getModel();
+                for(Object obj:leftListModel.toArray()) {
+                    rightListModel.addElement(obj);
+                }
+                rightList.setModel(rightListModel);
+                ((DefaultListModel) leftList.getModel()).clear();
+            }
+        });
+        JButton addButton = new JButton(">");
+        addButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                DefaultListModel rightListModel = (DefaultListModel) rightList.getModel();
+                for(String sel:(List<String>)leftList.getSelectedValuesList()) {
+                    rightListModel.addElement(sel);
+                }
+
+                rightList.setModel(rightListModel);
+
+                DefaultListModel leftListModel = (DefaultListModel) leftList.getModel();
+                for(String sel:(List<String>)leftList.getSelectedValuesList()) {
+                    leftListModel.removeElement(sel);
+                }
+                leftList.setModel(leftListModel);
+            }
+        });
+        JButton clearAllButton = new JButton("<<");
+        clearAllButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                DefaultListModel leftListModel = (DefaultListModel) leftList.getModel();
+                DefaultListModel rightListModel = (DefaultListModel) rightList.getModel();
+                for(Object obj:rightListModel.toArray()) {
+                    leftListModel.addElement(obj);
+                }
+                leftList.setModel(leftListModel);
+                ((DefaultListModel) rightList.getModel()).clear();
+            }
+        });
+        JButton clearButton = new JButton("<");
+        clearButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                DefaultListModel rightListModel = (DefaultListModel) rightList.getModel();
+                for(String sel:(List<String>)rightList.getSelectedValuesList()) {
+                    rightListModel.removeElement(sel);
+                }
+                rightList.setModel(rightListModel);
+
+                DefaultListModel leftListModel = (DefaultListModel) leftList.getModel();
+                for(String sel:(List<String>)rightList.getSelectedValuesList()) {
+                    leftListModel.addElement(sel);
+                }
+                leftList.setModel(leftListModel);
+            }
+        });
+
+        buttonsPanel.add(addAllButton);
+        buttonsPanel.add(addButton);
+        buttonsPanel.add(clearAllButton);
+        buttonsPanel.add(clearButton);
+
+        Box vbox = Box.createHorizontalBox();
+        allTablePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        selectedTablePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+        allTablePanel.setPreferredSize(new Dimension(60, 0));
+        buttonsPanel.setPreferredSize(new Dimension(30, 0));
+        selectedTablePanel.setPreferredSize(new Dimension(60, 0));
+        vbox.add(allTablePanel);
+        vbox.add(buttonsPanel);
+        vbox.add(selectedTablePanel);
+        JPanel multiTablePanel = new JPanel();
+        multiTablePanel.setLayout(new BoxLayout(multiTablePanel, BoxLayout.X_AXIS));
+        multiTablePanel.setPreferredSize(new Dimension(150, 0));
+        multiTablePanel.setName("Select Table");
+        multiTablePanel.add(vbox);
+        tabpanel.add(multiTablePanel);
     }
 
     public void generate(RawConnectionConfig connectionConfig) {
