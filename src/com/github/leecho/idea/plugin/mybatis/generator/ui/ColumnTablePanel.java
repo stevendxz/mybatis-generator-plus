@@ -9,6 +9,7 @@ import com.github.leecho.idea.plugin.mybatis.generator.model.ColumnSetting;
 import com.github.leecho.idea.plugin.mybatis.generator.model.ColumnSettingModel;
 import com.github.leecho.idea.plugin.mybatis.generator.model.TableConfig;
 import com.github.leecho.idea.plugin.mybatis.generator.model.TableInfo;
+import com.github.leecho.idea.plugin.mybatis.generator.types.JdbcTypeNameTranslator;
 import com.github.leecho.idea.plugin.mybatis.generator.util.StringUtils;
 import com.intellij.openapi.ui.VerticalFlowLayout;
 import com.intellij.ui.components.JBPanel;
@@ -18,7 +19,6 @@ import com.intellij.util.ui.JBUI;
 import org.jdesktop.swingx.JXTable;
 import org.mybatis.generator.api.IntrospectedColumn;
 import org.mybatis.generator.internal.types.JavaTypeResolverDefaultImpl;
-import org.mybatis.generator.internal.types.JdbcTypeNameTranslator;
 
 import javax.swing.*;
 import javax.swing.event.TableModelEvent;

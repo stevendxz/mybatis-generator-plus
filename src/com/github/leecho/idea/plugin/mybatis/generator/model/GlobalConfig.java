@@ -21,6 +21,52 @@ public class GlobalConfig {
 	private String author;
 	private String version;
 
+	private String servicePackage;
+	private String serviceModuleRootPath;
+	private String servicePostfix;
+	private String serviceImplPostfix;
+	private String serviceImplPackage;
+
+	public String getServiceImplPostfix() {
+		return serviceImplPostfix;
+	}
+
+	public void setServiceImplPostfix(String serviceImplPostfix) {
+		this.serviceImplPostfix = serviceImplPostfix;
+	}
+
+	public String getServicePackage() {
+		return servicePackage;
+	}
+
+	public void setServicePackage(String servicePackage) {
+		this.servicePackage = servicePackage;
+	}
+
+	public String getServiceModuleRootPath() {
+		return serviceModuleRootPath;
+	}
+
+	public void setServiceModuleRootPath(String serviceModuleRootPath) {
+		this.serviceModuleRootPath = serviceModuleRootPath;
+	}
+
+	public String getServicePostfix() {
+		return servicePostfix;
+	}
+
+	public void setServicePostfix(String servicePostfix) {
+		this.servicePostfix = servicePostfix;
+	}
+
+	public String getServiceImplPackage() {
+		return serviceImplPackage;
+	}
+
+	public void setServiceImplPackage(String serviceImplPackage) {
+		this.serviceImplPackage = serviceImplPackage;
+	}
+
 	public String getAuthor() {
 		return author;
 	}
@@ -111,6 +157,16 @@ public class GlobalConfig {
 	private boolean lombokBuilderAnnotation;
 
 	private boolean swaggerAnnotation;
+
+	private boolean useService;
+
+	public boolean isUseService() {
+		return useService;
+	}
+
+	public void setUseService(boolean useService) {
+		this.useService = useService;
+	}
 
 	public String getEntityModuleRootPath() {
 		return entityModuleRootPath;
@@ -367,6 +423,10 @@ public class GlobalConfig {
 		globalConfig.setMapperPostfix("Mapper");
 		globalConfig.setXmlPackage("mapper");
 		globalConfig.setExamplePostfix("Example");
+		globalConfig.setModelPostfix("Model");
+		globalConfig.setServicePostfix("Service");
+		globalConfig.setVersion("1.0.0");
+		globalConfig.setAuthor(System.getProperty("user.name"));
 		globalConfig.setUseExample(true);
 		globalConfig.setComment(true);
 		return globalConfig;

@@ -110,7 +110,6 @@ public class SwaggerPlugin extends PluginAdapter {
     }
 
 
-    @Override
     public boolean clientGenerated(
             Interface interfaze,
             TopLevelClass topLevelClass,

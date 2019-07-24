@@ -1,0 +1,94 @@
+<idea-plugin>
+  <id>com.github.leecho.idea.plugin.mybatis.generator</id>
+  <name>MyBatis Generator Plus</name>
+  <version>1.5.5</version>
+  <vendor email="leecho571@gmail.com" url="https://github.com/leecho/mybatis-generator-plus">Leecho</vendor>
+
+  <description>
+    <![CDATA[
+   <ul>
+       <li>
+            集成Idea Database工具<br/>
+            支持Mapper类文件自动合并<br/>
+            支持Mapper XML文件自动合并<br/>
+            支持自动忽略表前缀<br/>
+            支持自定义Domain类后缀<br/>
+            支持自定义Mapper类后缀<br/>
+            支持自定义Example类后缀<br/>
+            支持修改字段数据类型<br/>
+            支持忽略字段<br/>
+            支持多模块项目<br/>
+            支持自定义Domain模块根目录(Example根目录同Domain目录)<br/>
+            支持自定义Mapper模块根目录<br/>
+            支持自定义Mapper XML模块根目录<br/>
+            支持自定义Domain实体类注释
+            添加方法注释
+        </li>
+   </ul>
+    ]]>
+    <![CDATA[
+   <ul>
+        <li>在idea的database工具中使用，右击选择表生成mybatis相关的代码。目前已支持的数据库：Mysql、Mysql8(可能需要设置数据库时区time_zone = '+8:00')、Oracle、MariaDB。待验证：PostgreSQL与SQL Server </li>
+        <li>Step1: 连接Database: <kbd>View</kbd> > <kbd>Tool Windows</kbd> > <kbd>Database</kbd>。</li>
+        <li>Step2: 选择表，右击选择功能 <kbd>Generate MyBatis Code</kbd> 打开主页面。</li>
+        <li>Step3: 检查配置无误后点击 <kbd>ok</kbd>。</li>
+        <li>Step4: 首次使用时请提供账号密码。p</li>
+        <li>Step5: 生成完成，检查、使用代码。</li>
+   <li>Setting: <kbd>Tools</kbd> > <kbd>MyBatis Generator Plus</kbd> 此处设置默认配置，未设置则使用程序默认配置。</li>
+   </ul>
+    ]]>
+
+  </description>
+
+  <change-notes>
+    <![CDATA[
+   <ul>
+       <li>v1.0<br/>
+            Init Version
+        </li>
+       <li>v1.1<br/>
+            Update description
+        </li>
+       <li>v1.2<br/>
+            add comment column for column setting ui<br/>
+            fix database column type change bug
+        </li>
+        <li>v1.3<br/>
+            optimization some feature
+        </li>
+        <li>v1.4<br/>
+            add swagger support options<br/>
+            add table prefix support<br/>
+            new ui for generate setting<br/>
+            fixed some bugs<br/>
+        </li>
+        <li>v1.5<br/>
+            fix cannot get table remark bug<br/>
+            fix cannot support sql server bug<br/>
+            add progressbar for display connect to database<br/>
+            <br/>
+        </li>
+   </ul>
+    ]]>
+  </change-notes>
+
+  <idea-version since-build="143"/>
+
+  <depends optional="true">com.intellij.database</depends>
+  <extensions defaultExtensionNs="com.intellij">
+    <projectService
+            serviceInterface="com.github.leecho.idea.plugin.mybatis.generator.setting.MyBatisGeneratorConfiguration"
+            serviceImplementation="com.github.leecho.idea.plugin.mybatis.generator.setting.MyBatisGeneratorConfiguration"/>
+    <projectConfigurable groupId="tools" displayName="Mybatis Generator Plus" id="Mybatis.Generator.Plus.Plugin"
+                         instance="com.github.leecho.idea.plugin.mybatis.generator.setting.SettingConfigurable"/>
+  </extensions>
+
+  <actions>
+    <action id="mabatis-generate-action" class="com.github.leecho.idea.plugin.mybatis.generator.action.MainAction"
+            text="Generate MyBatis Code"
+            description="mybatis generator idea plugin">
+      <add-to-group group-id="DatabaseViewPopupMenu" anchor="last"/>
+    </action>
+
+  </actions>
+</idea-plugin>

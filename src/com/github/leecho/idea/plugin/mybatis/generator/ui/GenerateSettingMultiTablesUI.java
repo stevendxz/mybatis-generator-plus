@@ -32,6 +32,7 @@ import com.intellij.ui.components.panels.HorizontalLayout;
 import com.intellij.util.ui.JBUI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.mybatis.generator.exception.XMLParserException;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -45,6 +46,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.List;
@@ -66,8 +68,6 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
 
     private JPanel contentPane = new JBPanel<>();
 
-    private JTextField tableNameField = new JBTextField(20);
-
     private JButton columnSettingButton = new JButton("Column Setting");
     private TextFieldWithBrowseButton moduleRootField = new TextFieldWithBrowseButton();
     private TextFieldWithBrowseButton entityModuleRootField = new TextFieldWithBrowseButton();
@@ -78,11 +78,8 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
     private EditorTextFieldWithBrowseButton mapperPackageField;
     private EditorTextFieldWithBrowseButton examplePackageField;
     private JTextField xmlPackageField = new JTextField();
-    private JTextField mapperNameField = new JBTextField(20);
-    private JTextField domainNameField = new JBTextField(20);
-    private JTextField exampleNameField = new JBTextField(20);
-    private JTextField primaryKeyField = new JBTextField(20);
 
+    JPanel exampleModuleRootPanel = new JPanel();
     private JPanel examplePackagePanel = new JPanel();
     private JPanel exampleNamePanel = new JPanel();
 
@@ -113,20 +110,26 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
     private JTextField mapperPostfixField = new JTextField(20);
     private JTextField examplePostfixField = new JTextField(20);
     private JTextField servicePostfixField = new JTextField(20);
-    private JTextField serviceInterfacePostfixField = new JTextField(20);
+    private JTextField serviceImplPostfixField = new JTextField(20);
     private JPanel tablePanel = new JPanel();
     private JPanel allTablePanel = new JPanel();
     private JPanel selectedTablePanel = new JPanel();
     private JSplitPane jSplitPane = new JSplitPane();
     private JBList leftList = new JBList();
     private JBList rightList = new JBList();
-    private JCheckBox useServiceBox = new JCheckBox("Use Service");
-    private TextFieldWithBrowseButton serviceModuleRootField = new TextFieldWithBrowseButton();
-    private EditorTextFieldWithBrowseButton servicePackageField;
-    private EditorTextFieldWithBrowseButton serviceInterfacePackageField;
     private DefaultListModel listModel = new DefaultListModel();
 
     private List<TableInfo> allTablesList = new ArrayList<>();
+
+    private TextFieldWithBrowseButton serviceModuleRootField = new TextFieldWithBrowseButton();
+    private EditorTextFieldWithBrowseButton servicePackageField;
+    private EditorTextFieldWithBrowseButton serviceImplPackageField;
+    private JTextField serviceNameField = new JBTextField(20);
+    private JPanel servicePackagePanel = new JPanel();
+    private JPanel serviceNamePanel = new JPanel();
+    private JPanel serviceImplPackagePanel = new JPanel();
+    private JPanel serviceModuleRootPathPanel = new JPanel();
+    private JCheckBox useServiceBox = new JCheckBox("Use Service");
 
     public GenerateSettingMultiTablesUI(AnActionEvent anActionEvent) {
         super(anActionEvent.getData(PlatformDataKeys.PROJECT));
@@ -186,10 +189,18 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
             tableConfig.setLombokAnnotation(globalConfig.isLombokAnnotation());
             tableConfig.setLombokBuilderAnnotation(globalConfig.isLombokBuilderAnnotation());
             tableConfig.setSwaggerAnnotation(globalConfig.isSwaggerAnnotation());
-//            tableConfig.setPrimaryKey(primaryKey);
+            tableConfig.setUseService(globalConfig.isUseService());
 
             tableConfig.setAuthor(globalConfig.getAuthor());
             tableConfig.setVersion(globalConfig.getVersion());
+
+            tableConfig.setTablePrefix(globalConfig.getTablePrefix());
+
+            tableConfig.setUseService(globalConfig.isUseService());
+            tableConfig.setServicePostfix(globalConfig.getServicePostfix());
+            tableConfig.setServicePackage(globalConfig.getServicePackage());
+            tableConfig.setServiceModuleRootPath(globalConfig.getServiceModuleRootPath());
+            tableConfig.setServiceImplPackage(globalConfig.getServiceImplPackage());
         }
         VerticalFlowLayout layoutManager = new VerticalFlowLayout(VerticalFlowLayout.TOP);
         layoutManager.setHgap(0);
@@ -231,14 +242,6 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
             errors.add("Mapper XML module root must not be null");
         }
 
-        if (StringUtils.isEmpty(domainNameField.getText())) {
-            errors.add("Domain name must not be null");
-        }
-
-        if (StringUtils.isEmpty(mapperNameField.getText())) {
-            errors.add("Mapper name must not be null");
-        }
-
         if (StringUtils.isEmpty(domainPackageField.getText())) {
             errors.add("Domain package must not be null");
         }
@@ -252,9 +255,6 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         }
 
         if (useExampleBox.getSelectedObjects() != null) {
-            if (StringUtils.isEmpty(exampleNameField.getText())) {
-                errors.add("Example name must not be null");
-            }
             if (StringUtils.isEmpty(examplePackageField.getText())) {
                 errors.add("Example package must not be null");
             }
@@ -358,7 +358,11 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
 
         super.doOKAction();
 
-        this.generate(connectionConfig);
+        try {
+            this.generate(connectionConfig);
+        } catch (XMLParserException e) {
+            e.printStackTrace();
+        }
 
     }
 
@@ -413,10 +417,18 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         optionsPanel.add(lombokAnnotationBox);
         optionsPanel.add(lombokBuilderAnnotationBox);
         optionsPanel.add(swaggerAnnotationBox);
+        optionsPanel.add(useServiceBox);
 
         useExampleBox.addChangeListener(e -> {
             exampleNamePanel.setVisible(useExampleBox.getSelectedObjects() != null);
             examplePackagePanel.setVisible(useExampleBox.getSelectedObjects() != null);
+        });
+
+        useServiceBox.addChangeListener(e -> {
+            serviceNamePanel.setVisible(useServiceBox.getSelectedObjects() != null);
+            serviceModuleRootPathPanel.setVisible(useServiceBox.getSelectedObjects() != null);
+            servicePackagePanel.setVisible(useServiceBox.getSelectedObjects() != null);
+            serviceImplPackagePanel.setVisible(useServiceBox.getSelectedObjects() != null);
         });
 
         offsetLimitBox.setSelected(tableConfig.isOffsetLimit());
@@ -468,44 +480,7 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         moduleRootPanel.add(projectRootLabel);
         moduleRootPanel.add(moduleRootField);
 
-        //Table
-        /*JPanel tableNamePanel = new JPanel();
-        tableNamePanel.setLayout(new BoxLayout(tableNamePanel, BoxLayout.X_AXIS));
-        JLabel tableLabel = new JLabel("Table Name:");
-        tableLabel.setLabelFor(tableNameField);
-        tableLabel.setPreferredSize(new Dimension(150, 10));
-        tableNamePanel.add(tableLabel);
-        tableNamePanel.add(tableNameField);
-
-        if (psiElements.length > 1) {
-            tableNameField.addFocusListener(new JTextFieldHintListener(tableNameField, "eg:db_table"));
-        } else {
-            tableNameField.setText(tableName);
-        }
-        tableNameField.setEditable(false);
-        tableNameField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                String entityName = StringUtils.dbStringToCamelStyle(tableNameField.getText());
-                domainNameField.setText(getDomainName(entityName));
-                mapperNameField.setText(getMapperName(entityName));
-                exampleNameField.setText(getExampleName(entityName));
-            }
-        });
-
-        JPanel primaryPanel = new JPanel();
-        primaryPanel.setLayout(new BoxLayout(primaryPanel, BoxLayout.X_AXIS));
-        JLabel primaryKeyLabel = new JLabel("   Primary Key:");
-        primaryKeyLabel.setLabelFor(primaryKeyField);
-        primaryKeyLabel.setPreferredSize(new Dimension(150, 10));
-        tableNamePanel.add(primaryKeyLabel);
-        tableNamePanel.add(primaryKeyField);
-        primaryKeyField.setText(primaryKey);
-        primaryKeyField.setEditable(false);
-        */
         headerPanel.add(moduleRootPanel);
-//        headerPanel.add(tableNamePanel);
-//        headerPanel.add(primaryPanel);
         contentPane.add(headerPanel);
     }
 
@@ -515,6 +490,9 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         modelPostfixPanel.setLayout(new BoxLayout(modelPostfixPanel, BoxLayout.X_AXIS));
         JBLabel modelPostfixLabel = new JBLabel("Model Postfix:");
         modelPostfixLabel.setPreferredSize(new Dimension(200, 20));
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getModelPostfix())) {
+            modelPostfixField.setText(tableConfig.getModelPostfix());
+        }
         modelPostfixPanel.add(modelPostfixLabel);
         modelPostfixPanel.add(modelPostfixField);
 
@@ -523,6 +501,9 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         mapperPostfixPanel.setLayout(new BoxLayout(mapperPostfixPanel, BoxLayout.X_AXIS));
         JBLabel mapperPostfixLabel = new JBLabel("Mapper Postfix:");
         mapperPostfixLabel.setPreferredSize(new Dimension(200, 20));
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getMapperPostfix())) {
+            mapperPostfixField.setText(tableConfig.getMapperPostfix());
+        }
         mapperPostfixPanel.add(mapperPostfixLabel);
         mapperPostfixPanel.add(mapperPostfixField);
 
@@ -531,73 +512,20 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         examplePostfixPanel.setLayout(new BoxLayout(examplePostfixPanel, BoxLayout.X_AXIS));
         JBLabel examplePostfixLabel = new JBLabel("Example Postfix:");
         examplePostfixLabel.setPreferredSize(new Dimension(200, 20));
+        examplePostfixPanel.setVisible(tableConfig.isUseExample());
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getExamplePostfix())) {
+            examplePostfixField.setText(tableConfig.getExamplePostfix());
+        }
         examplePostfixPanel.add(examplePostfixLabel);
         examplePostfixPanel.add(examplePostfixField);
-        examplePostfixPanel.setVisible(tableConfig.isUseExample());
 
         // example类 后缀设置
-//        JPanel servicePostfixPanel = new JPanel();
-//        servicePostfixPanel.setLayout(new BoxLayout(servicePostfixPanel, BoxLayout.X_AXIS));
-//        JBLabel servicePostfixLabel = new JBLabel("Service Postfix:");
-//        servicePostfixLabel.setPreferredSize(new Dimension(200, 20));
-//        servicePostfixPanel.add(servicePostfixLabel);
-//        servicePostfixPanel.add(servicePostfixField);
-
-//        JPanel domainNamePanel = new JPanel();
-//        domainNamePanel.setLayout(new BoxLayout(domainNamePanel, BoxLayout.X_AXIS));
-//        JLabel entityNameLabel = new JLabel("Model Postfix:");
-//        entityNameLabel.setPreferredSize(new Dimension(150, 10));
-//        domainNamePanel.add(entityNameLabel);
-//        domainNamePanel.add(domainNameField);
-//        if (psiElements.length > 1) {
-//            domainNameField.addFocusListener(new JTextFieldHintListener(domainNameField, "eg:DbTable"));
-//        } else {
-//            domainNameField.setText(getDomainName(modelName));
-//        }
-//        domainNameField.addKeyListener(new KeyAdapter() {
-//            @Override
-//            public void keyReleased(KeyEvent e) {
-//                mapperNameField.setText(getMapperName(modelName));
-//                exampleNameField.setText(getExampleName(modelName));
-//            }
-//        });
-//
-//        //MapperName
-//        JPanel mapperNamePanel = new JPanel();
-//        mapperNamePanel.setLayout(new BoxLayout(mapperNamePanel, BoxLayout.X_AXIS));
-//        JLabel mapperNameLabel = new JLabel("Mapper Postfix:");
-//        mapperNameLabel.setPreferredSize(new Dimension(150, 10));
-//        mapperNameLabel.setLabelFor(mapperNameField);
-//        mapperNamePanel.add(mapperNameLabel);
-//        mapperNamePanel.add(mapperNameField);
-//        if (psiElements.length > 1) {
-//            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getMapperPostfix())) {
-//                mapperNameField.addFocusListener(new JTextFieldHintListener(mapperNameField, "eg:DbTable" + tableConfig.getMapperPostfix()));
-//            } else {
-//                mapperNameField.addFocusListener(new JTextFieldHintListener(mapperNameField, "eg:DbTable" + "Mapper"));
-//            }
-//        } else {
-//            mapperNameField.setText(getMapperName(modelName));
-//        }
-//
-//        exampleNamePanel.setLayout(new BoxLayout(exampleNamePanel, BoxLayout.X_AXIS));
-//        JLabel exampleNameLabel = new JLabel("Example Postfix:");
-//        exampleNameLabel.setPreferredSize(new Dimension(150, 10));
-//        exampleNameLabel.setLabelFor(exampleNameField);
-//        exampleNamePanel.add(exampleNameLabel);
-//        exampleNamePanel.add(exampleNameField);
-//        if (psiElements.length > 1) {
-//            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getExamplePostfix())) {
-//                exampleNameField.addFocusListener(new JTextFieldHintListener(exampleNameField, "eg:DbTable" + tableConfig.getExamplePostfix()));
-//            } else {
-//                exampleNameField.addFocusListener(new JTextFieldHintListener(exampleNameField, "eg:DbTable" + "Example"));
-//            }
-//        } else {
-//            exampleNameField.setText(getExampleName(modelName));
-//        }
-//
-//        exampleNamePanel.setVisible(tableConfig.isUseExample());
-
+        JPanel servicePostfixPanel = new JPanel();
+        servicePostfixPanel.setLayout(new BoxLayout(servicePostfixPanel, BoxLayout.X_AXIS));
+        JBLabel servicePostfixLabel = new JBLabel("Service Postfix:");
+        servicePostfixLabel.setPreferredSize(new Dimension(200, 20));
+        servicePostfixPanel.add(servicePostfixLabel);
+        servicePostfixPanel.add(servicePostfixField);
 
         JPanel basePackagePanel = new JPanel();
         basePackagePanel.setLayout(new BoxLayout(basePackagePanel, BoxLayout.X_AXIS));
@@ -615,6 +543,8 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
                 domainPackageField.setText(packageName + ".model");
                 mapperPackageField.setText(packageName + "." + getMapperPostfix().toLowerCase());
                 examplePackageField.setText(packageName + "." + getExamplePostfix().toLowerCase());
+                servicePackageField.setText(packageName + "." + getServicePostfix().toLowerCase());
+                serviceImplPackageField.setText(packageName + "." + getServicePostfix().toLowerCase() + ".impl");
             }
         });
         basePackageField.addKeyListener(new KeyAdapter() {
@@ -623,6 +553,8 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
                 domainPackageField.setText(basePackageField.getText() + ".model");
                 mapperPackageField.setText(basePackageField.getText() + "." + getMapperPostfix().toLowerCase());
                 examplePackageField.setText(basePackageField.getText() + "." + getExamplePostfix().toLowerCase());
+                servicePackageField.setText(basePackageField.getText() + "." + getServicePostfix().toLowerCase());
+                serviceImplPackageField.setText(basePackageField.getText() + "." + getServicePostfix().toLowerCase() + ".impl");
             }
         });
         if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getBasePackage())) {
@@ -648,8 +580,8 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
                 entityModuleRootField.setText(entityModuleRootField.getText().replaceAll("\\\\", "/"));
             }
         });
-        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getModuleRootPath())) {
-            entityModuleRootField.setText(tableConfig.getModuleRootPath());
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getDomainModuleRootPath())) {
+            entityModuleRootField.setText(tableConfig.getDomainModuleRootPath());
         } else {
             entityModuleRootField.setText(project.getBasePath());
         }
@@ -690,8 +622,8 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
                 mapperModuleRootField.setText(mapperModuleRootField.getText().replaceAll("\\\\", "/"));
             }
         });
-        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getModuleRootPath())) {
-            mapperModuleRootField.setText(tableConfig.getModuleRootPath());
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getMapperModuleRootPath())) {
+            mapperModuleRootField.setText(tableConfig.getMapperModuleRootPath());
         } else {
             mapperModuleRootField.setText(project.getBasePath());
         }
@@ -757,8 +689,8 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
                 xmlModuleRootField.setText(xmlModuleRootField.getText().replaceAll("\\\\", "/"));
             }
         });
-        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getModuleRootPath())) {
-            xmlModuleRootField.setText(tableConfig.getModuleRootPath());
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getXmlModuleRootPath())) {
+            xmlModuleRootField.setText(tableConfig.getXmlModuleRootPath());
         } else {
             xmlModuleRootField.setText(project.getBasePath());
         }
@@ -772,6 +704,74 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         xmlPackagePanel.add(xmlPackageLabel);
         xmlPackagePanel.add(xmlPackageField);
 
+        // 实体类目录设置
+        serviceModuleRootPathPanel.setLayout(new BoxLayout(serviceModuleRootPathPanel, BoxLayout.X_AXIS));
+        JBLabel serviceModuleRootLabel = new JBLabel("Service Root:");
+        serviceModuleRootLabel.setPreferredSize(new Dimension(150, 20));
+        serviceModuleRootField.addBrowseFolderListener(new TextBrowseFolderListener(FileChooserDescriptorFactory.createSingleFolderDescriptor()) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                super.actionPerformed(e);
+                serviceModuleRootField.setText(serviceModuleRootField.getText().replaceAll("\\\\", "/"));
+            }
+        });
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getModuleRootPath())) {
+            serviceModuleRootField.setText(tableConfig.getModuleRootPath());
+        } else {
+            serviceModuleRootField.setText(project.getBasePath());
+        }
+        serviceModuleRootPathPanel.add(serviceModuleRootLabel);
+        serviceModuleRootPathPanel.add(serviceModuleRootField);
+        serviceModuleRootPathPanel.setVisible(tableConfig.isUseService());
+
+        servicePackagePanel = new JPanel();
+        servicePackagePanel.setLayout(new BoxLayout(servicePackagePanel, BoxLayout.X_AXIS));
+        JBLabel servicePackageLabel = new JBLabel("Service Package:");
+        servicePackageField = new EditorTextFieldWithBrowseButton(project, false);
+        servicePackageLabel.setPreferredSize(new Dimension(150, 10));
+        servicePackageField.addActionListener(e -> {
+            final PackageChooserDialog chooser = new PackageChooserDialog("Select Service Package", project);
+            chooser.selectPackage(servicePackageField.getText());
+            chooser.show();
+            final PsiPackage psiPackage = chooser.getSelectedPackage();
+            String packageName = psiPackage == null ? null : psiPackage.getQualifiedName();
+            if (!StringUtils.isEmpty(packageName)) {
+                servicePackageField.setText(packageName);
+            }
+        });
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getServicePackage())) {
+            servicePackageField.setText(tableConfig.getServicePackage());
+        } else {
+            servicePackageField.setText("");
+        }
+        servicePackagePanel.add(servicePackageLabel);
+        servicePackagePanel.add(servicePackageField);
+        servicePackagePanel.setVisible(tableConfig.isUseService());
+
+        serviceImplPackagePanel = new JPanel();
+        serviceImplPackagePanel.setLayout(new BoxLayout(serviceImplPackagePanel, BoxLayout.X_AXIS));
+        JBLabel serviceImplPackageLabel = new JBLabel("Service Impl Package:");
+        serviceImplPackageField = new EditorTextFieldWithBrowseButton(project, false);
+        serviceImplPackageLabel.setPreferredSize(new Dimension(150, 10));
+        serviceImplPackageField.addActionListener(e -> {
+            final PackageChooserDialog chooser = new PackageChooserDialog("Select Service Impl Package", project);
+            chooser.selectPackage(serviceImplPackageField.getText());
+            chooser.show();
+            final PsiPackage psiPackage = chooser.getSelectedPackage();
+            String packageName = psiPackage == null ? null : psiPackage.getQualifiedName();
+            if (!StringUtils.isEmpty(packageName)) {
+                serviceImplPackageField.setText(packageName);
+            }
+        });
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getServiceImplPackage())) {
+            serviceImplPackageField.setText(tableConfig.getServiceImplPackage());
+        } else {
+            serviceImplPackageField.setText("");
+        }
+        serviceImplPackagePanel.add(serviceImplPackageLabel);
+        serviceImplPackagePanel.add(serviceImplPackageField);
+        serviceImplPackagePanel.setVisible(tableConfig.isUseService());
+
         // 自定义注释
         JPanel authorPanel = new JPanel();
         authorPanel.setLayout(new BoxLayout(authorPanel, BoxLayout.X_AXIS));
@@ -780,13 +780,7 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         authorLabel.setLabelFor(authorField);
         authorPanel.add(authorLabel);
         authorPanel.add(authorField);
-        if (psiElements.length > 1) {
-            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getAuthor())) {
-                authorField.addFocusListener(new JTextFieldHintListener(authorField, "eg:DbTable" + tableConfig.getAuthor()));
-            } else {
-                authorField.addFocusListener(new JTextFieldHintListener(authorField, "eg:DbTable" + System.getProperty("user.name")));
-            }
-        } else {
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getAuthor())) {
             authorField.setText(tableConfig.getAuthor());
         }
 
@@ -797,13 +791,7 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         descriptionLabel.setLabelFor(descriptionField);
         descriptionPanel.add(descriptionLabel);
         descriptionPanel.add(descriptionField);
-        if (psiElements.length > 1) {
-            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getDescription())) {
-                descriptionField.addFocusListener(new JTextFieldHintListener(descriptionField, "eg:DbTable" + tableConfig.getDescription()));
-            } else {
-                descriptionField.addFocusListener(new JTextFieldHintListener(descriptionField, "eg:DbTable" + "TODO"));
-            }
-        } else {
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getDescription())) {
             descriptionField.setText(tableConfig.getDescription());
         }
 
@@ -814,13 +802,7 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         versionLabel.setLabelFor(versionField);
         versionPanel.add(versionLabel);
         versionPanel.add(versionField);
-        if (psiElements.length > 1) {
-            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getVersion())) {
-                versionField.addFocusListener(new JTextFieldHintListener(versionField, "eg:DbTable" + tableConfig.getVersion()));
-            } else {
-                versionField.addFocusListener(new JTextFieldHintListener(versionField, "eg:DbTable" + "1.0.0"));
-            }
-        } else {
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getVersion())) {
             versionField.setText(tableConfig.getVersion());
         }
 
@@ -844,6 +826,7 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         domainPanel.add(modelPostfixPanel);
         domainPanel.add(mapperPostfixPanel);
         domainPanel.add(examplePostfixPanel);
+        domainPanel.add(servicePostfixPanel);
         generalPanel.add(domainPanel);
 
         generalPanel.add(new TitledSeparator("Package"));
@@ -857,6 +840,9 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         packagePanel.add(mapperModuleRootPanel);
         packagePanel.add(mapperPackagePanel);
         packagePanel.add(examplePackagePanel);
+        packagePanel.add(serviceModuleRootPathPanel);
+        packagePanel.add(servicePackagePanel);
+        packagePanel.add(serviceImplPackagePanel);
         packagePanel.add(xmlModuleRootPanel);
         packagePanel.add(xmlPackagePanel);
         generalPanel.add(packagePanel);
@@ -940,16 +926,16 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
             @Override
             public void actionPerformed(ActionEvent e) {
                 DefaultListModel rightListModel = (DefaultListModel) rightList.getModel();
-                for(Object obj : rightList.getSelectedValuesList()) {
-                    rightListModel.removeElement(obj);
-                }
-                rightList.setModel(rightListModel);
 
                 DefaultListModel leftListModel = (DefaultListModel) leftList.getModel();
                 for(Object obj : rightList.getSelectedValuesList()) {
                     leftListModel.addElement(obj);
                 }
                 leftList.setModel(leftListModel);
+                for(Object obj : rightList.getSelectedValuesList()) {
+                    rightListModel.removeElement(obj);
+                }
+                rightList.setModel(rightListModel);
             }
         });
 
@@ -961,23 +947,21 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         Box vbox = Box.createHorizontalBox();
         allTablePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
         selectedTablePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-        allTablePanel.setPreferredSize(new Dimension(60, 0));
-        buttonsPanel.setPreferredSize(new Dimension(30, 0));
-        selectedTablePanel.setPreferredSize(new Dimension(60, 0));
+        allTablePanel.setPreferredSize(new Dimension(100, 0));
+        buttonsPanel.setPreferredSize(new Dimension(50, 0));
+        selectedTablePanel.setPreferredSize(new Dimension(100, 0));
         vbox.add(allTablePanel);
         vbox.add(buttonsPanel);
         vbox.add(selectedTablePanel);
         JPanel multiTablePanel = new JPanel();
         multiTablePanel.setLayout(new BoxLayout(multiTablePanel, BoxLayout.X_AXIS));
-        multiTablePanel.setPreferredSize(new Dimension(150, 0));
+        multiTablePanel.setPreferredSize(new Dimension(250, 0));
         multiTablePanel.setName("Select Table");
         multiTablePanel.add(vbox);
         tabpanel.add(multiTablePanel);
     }
 
-    public void generate(RawConnectionConfig connectionConfig) {
-        tableConfig.setName(tableNameField.getText());
-        tableConfig.setTableName(tableNameField.getText());
+    public void generate(RawConnectionConfig connectionConfig) throws XMLParserException {
         tableConfig.setModuleRootPath(moduleRootField.getText());
         tableConfig.setDomainModuleRootPath(entityModuleRootField.getText());
         tableConfig.setMapperModuleRootPath(mapperModuleRootField.getText());
@@ -988,11 +972,6 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         tableConfig.setMapperPackage(mapperPackageField.getText());
         tableConfig.setExamplePackage(examplePackageField.getText());
         tableConfig.setXmlPackage(xmlPackageField.getText());
-
-        tableConfig.setMapperName(mapperNameField.getText());
-        tableConfig.setDomainName(domainNameField.getText());
-        tableConfig.setPrimaryKey(primaryKeyField.getText());
-        tableConfig.setExampleName(exampleNameField.getText());
 
         tableConfig.setOffsetLimit(offsetLimitBox.getSelectedObjects() != null);
         tableConfig.setComment(commentBox.getSelectedObjects() != null);
@@ -1017,6 +996,33 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
         tableConfig.setAuthor(authorField.getText());
         tableConfig.setVersion(versionField.getText());
         tableConfig.setDescription(descriptionField.getText());
+
+        tableConfig.setModelPostfix(modelPostfixField.getText());
+        tableConfig.setMapperPostfix(mapperPostfixField.getText());
+        tableConfig.setExamplePostfix(examplePostfixField.getText());
+
+        DefaultListModel rightListModel = (DefaultListModel) rightList.getModel();
+        List<TableInfo> tableList = new ArrayList();
+        if(rightListModel.size() > 0) {
+            String[] tableNameArr = new String[rightListModel.getSize()];
+            for(int i = 0; i < rightListModel.getSize(); i ++) {
+                tableNameArr[i] = rightListModel.elementAt(i).toString();
+            }
+            for(String tn : tableNameArr) {
+                for(TableInfo info : allTablesList) {
+                    if(tn.equals(info.getTableName())) {
+                        tableList.add(info);
+                    }
+                }
+            }
+        }
+        tableConfig.setTableList(tableList);
+
+        tableConfig.setServicePackage(servicePackageField.getText());
+        tableConfig.setServiceModuleRootPath(serviceModuleRootField.getText());
+        tableConfig.setServiceImplPackage(serviceImplPackageField.getText());
+        tableConfig.setServiceName(serviceNameField.getText());
+        tableConfig.setUseService(useServiceBox.getSelectedObjects() != null);
 
         new MyBatisGenerateCommand(tableConfig).execute(project, connectionConfig);
 
@@ -1059,6 +1065,22 @@ public class GenerateSettingMultiTablesUI extends DialogWrapper {
             return entityName + tableConfig.getExamplePostfix();
         } else {
             return (entityName + "Example");
+        }
+    }
+
+    private String getServicePostfix() {
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getServicePostfix())) {
+            return tableConfig.getServicePostfix();
+        } else {
+            return "Service";
+        }
+    }
+
+    private String getServiceName(String entityName) {
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getServicePostfix())) {
+            return entityName + tableConfig.getServicePostfix();
+        } else {
+            return (entityName + "Service");
         }
     }
 
