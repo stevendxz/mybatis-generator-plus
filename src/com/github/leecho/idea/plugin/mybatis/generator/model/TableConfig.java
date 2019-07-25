@@ -1,6 +1,7 @@
 package com.github.leecho.idea.plugin.mybatis.generator.model;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -75,6 +76,89 @@ public class TableConfig {
 	private String author;
 	private String description;
 	private String version;
+
+	private List<TableInfo> tableList;
+	private String tablePrefix;
+
+	private String servicePackage;
+	private String serviceModuleRootPath;
+	private String servicePostfix;
+	private String serviceImplPostfix;
+	private String serviceImplPackage;
+	private String serviceName;
+	private String serviceImplName;
+
+	public String getServiceImplPostfix() {
+		return serviceImplPostfix;
+	}
+
+	public void setServiceImplPostfix(String serviceImplPostfix) {
+		this.serviceImplPostfix = serviceImplPostfix;
+	}
+
+	public String getServiceImplPackage() {
+		return serviceImplPackage;
+	}
+
+	public String getServiceImplName() {
+		return serviceImplName;
+	}
+
+	public void setServiceImplName(String serviceImplName) {
+		this.serviceImplName = serviceImplName;
+	}
+
+	public String getServiceName() {
+		return serviceName;
+	}
+
+	public void setServiceName(String serviceName) {
+		this.serviceName = serviceName;
+	}
+
+	public void setServiceImplPackage(String serviceImplPackage) {
+		this.serviceImplPackage = serviceImplPackage;
+	}
+
+	public String getServicePackage() {
+		return servicePackage;
+	}
+
+	public void setServicePackage(String servicePackage) {
+		this.servicePackage = servicePackage;
+	}
+
+	public String getServiceModuleRootPath() {
+		return serviceModuleRootPath;
+	}
+
+	public void setServiceModuleRootPath(String serviceModuleRootPath) {
+		this.serviceModuleRootPath = serviceModuleRootPath;
+	}
+
+	public String getServicePostfix() {
+		return servicePostfix;
+	}
+
+	public void setServicePostfix(String servicePostfix) {
+		this.servicePostfix = servicePostfix;
+	}
+
+	public String getTablePrefix() {
+		return tablePrefix;
+	}
+
+	public void setTablePrefix(String tablePrefix) {
+		this.tablePrefix = tablePrefix;
+	}
+
+	public List<TableInfo> getTableList() {
+		return tableList;
+	}
+
+	public void setTableList(List<TableInfo> tableList) {
+		this.tableList = tableList;
+	}
 
 	public String getAuthor() {
 		return author;
@@ -179,7 +263,17 @@ public class TableConfig {
 	private String encoding;
 	private String connectorJarPath;
 
-    public boolean isJsr310Support() {
+	private boolean useService;
+
+	public boolean isUseService() {
+		return useService;
+	}
+
+	public void setUseService(boolean useService) {
+		this.useService = useService;
+	}
+
+	public boolean isJsr310Support() {
         return jsr310Support;
     }
 

@@ -34,12 +34,17 @@ import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.JBUI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.mybatis.generator.api.MyBatisGenerator;
+import org.mybatis.generator.config.Configuration;
+import org.mybatis.generator.exception.XMLParserException;
+import org.mybatis.generator.internal.DefaultShellCallback;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -83,6 +88,17 @@ public class GenerateSettingUI extends DialogWrapper {
     private JPanel examplePackagePanel = new JPanel();
     private JPanel exampleNamePanel = new JPanel();
 
+    private TextFieldWithBrowseButton serviceModuleRootField = new TextFieldWithBrowseButton();
+    private EditorTextFieldWithBrowseButton servicePackageField;
+    private EditorTextFieldWithBrowseButton serviceImplPackageField;
+    private JTextField serviceNameField = new JBTextField(20);
+    private JTextField serviceImplNameField = new JBTextField(20);
+    private JPanel servicePackagePanel = new JPanel();
+    private JPanel serviceNamePanel = new JPanel();
+    private JPanel serviceImplNamePanel = new JPanel();
+    private JPanel serviceImplPackagePanel = new JPanel();
+    private JPanel serviceModuleRootPathPanel = new JPanel();
+
     private JCheckBox offsetLimitBox = new JCheckBox("Pageable");
     private JCheckBox commentBox = new JCheckBox("Comment");
     private JCheckBox overrideBox = new JCheckBox("Overwrite");
@@ -100,6 +116,7 @@ public class GenerateSettingUI extends DialogWrapper {
     private JCheckBox lombokAnnotationBox = new JCheckBox("Lombok");
     private JCheckBox lombokBuilderAnnotationBox = new JCheckBox("Lombok Builder");
     private JCheckBox swaggerAnnotationBox = new JCheckBox("Swagger Model");
+    private JCheckBox useServiceBox = new JCheckBox("Use Service");
     private JBTabbedPane tabpanel = new JBTabbedPane();
     private JTextField authorField = new JBTextField(20);
     private JTextField versionField = new JBTextField(20);
@@ -180,6 +197,12 @@ public class GenerateSettingUI extends DialogWrapper {
 
             tableConfig.setAuthor(globalConfig.getAuthor());
             tableConfig.setVersion(globalConfig.getVersion());
+
+            tableConfig.setUseService(globalConfig.isUseService());
+            tableConfig.setServicePostfix(globalConfig.getServicePostfix());
+            tableConfig.setServicePackage(globalConfig.getServicePackage());
+            tableConfig.setServiceModuleRootPath(globalConfig.getServiceModuleRootPath());
+            tableConfig.setServiceImplPackage(globalConfig.getServiceImplPackage());
         }
         VerticalFlowLayout layoutManager = new VerticalFlowLayout(VerticalFlowLayout.TOP);
         layoutManager.setHgap(0);
@@ -344,10 +367,20 @@ public class GenerateSettingUI extends DialogWrapper {
                 return;
             }
         }
-
         super.doOKAction();
 
-        this.generate(connectionConfig);
+//        ConfigurationParserOverride cp = new ConfigurationParserOverride(warnings);
+//        Configuration config = cp.parseConfiguration(configFile);
+//        DefaultShellCallback callback = new DefaultShellCallback(overwrite);
+//        MyBatisGenerator myBatisGenerator = new MyBatisGenerator(config, callback, warnings);
+
+        try {
+            this.generate(connectionConfig);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (XMLParserException e) {
+            e.printStackTrace();
+        }
 
     }
 
@@ -402,10 +435,18 @@ public class GenerateSettingUI extends DialogWrapper {
         optionsPanel.add(lombokAnnotationBox);
         optionsPanel.add(lombokBuilderAnnotationBox);
         optionsPanel.add(swaggerAnnotationBox);
+        optionsPanel.add(useServiceBox);
 
         useExampleBox.addChangeListener(e -> {
             exampleNamePanel.setVisible(useExampleBox.getSelectedObjects() != null);
             examplePackagePanel.setVisible(useExampleBox.getSelectedObjects() != null);
+        });
+
+        useServiceBox.addChangeListener(e -> {
+            serviceNamePanel.setVisible(useServiceBox.getSelectedObjects() != null);
+            servicePackagePanel.setVisible(useServiceBox.getSelectedObjects() != null);
+            serviceImplPackagePanel.setVisible(useServiceBox.getSelectedObjects() != null);
+            serviceModuleRootPathPanel.setVisible(useServiceBox.getSelectedObjects() != null);
         });
 
         offsetLimitBox.setSelected(tableConfig.isOffsetLimit());
@@ -425,6 +466,7 @@ public class GenerateSettingUI extends DialogWrapper {
         lombokAnnotationBox.setSelected(tableConfig.isLombokAnnotation());
         lombokBuilderAnnotationBox.setSelected(tableConfig.isLombokBuilderAnnotation());
         swaggerAnnotationBox.setSelected(tableConfig.isSwaggerAnnotation());
+        useServiceBox.setSelected(tableConfig.isUseService());
         optionsPanel.setName("Options");
         tabpanel.add(optionsPanel);
     }
@@ -479,6 +521,7 @@ public class GenerateSettingUI extends DialogWrapper {
                 domainNameField.setText(getDomainName(entityName));
                 mapperNameField.setText(getMapperName(entityName));
                 exampleNameField.setText(getExampleName(entityName));
+                serviceNameField.setText(getServiceName(entityName));
             }
         });
 
@@ -515,6 +558,7 @@ public class GenerateSettingUI extends DialogWrapper {
             public void keyReleased(KeyEvent e) {
                 mapperNameField.setText(getMapperName(modelName));
                 exampleNameField.setText(getExampleName(modelName));
+                serviceNameField.setText(getServiceName(modelName));
             }
         });
 
@@ -554,6 +598,42 @@ public class GenerateSettingUI extends DialogWrapper {
 
         exampleNamePanel.setVisible(tableConfig.isUseExample());
 
+        serviceNamePanel.setLayout(new BoxLayout(serviceNamePanel, BoxLayout.X_AXIS));
+        JLabel serviceNameLabel = new JLabel("Service Name:");
+        serviceNameLabel.setPreferredSize(new Dimension(150, 10));
+        serviceNameLabel.setLabelFor(serviceNameField);
+        serviceNamePanel.add(serviceNameLabel);
+        serviceNamePanel.add(serviceNameField);
+        if (psiElements.length > 1) {
+            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getExamplePostfix())) {
+                serviceNameField.addFocusListener(new JTextFieldHintListener(serviceNameField, "eg:DbTable" + tableConfig.getServicePostfix()));
+            } else {
+                serviceNameField.addFocusListener(new JTextFieldHintListener(serviceNameField, "eg:DbTable" + "Service"));
+            }
+        } else {
+            serviceNameField.setText(getServiceName(modelName));
+        }
+
+        serviceNamePanel.setVisible(tableConfig.isUseService());
+
+        serviceImplNamePanel.setLayout(new BoxLayout(serviceImplNamePanel, BoxLayout.X_AXIS));
+        JLabel serviceImplNameLabel = new JLabel("Service Impl Name:");
+        serviceImplNameLabel.setPreferredSize(new Dimension(150, 10));
+        serviceImplNameLabel.setLabelFor(serviceImplNameField);
+        serviceImplNamePanel.add(serviceImplNameLabel);
+        serviceImplNamePanel.add(serviceImplNameField);
+        if (psiElements.length > 1) {
+            if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getExamplePostfix())) {
+                serviceImplNameField.addFocusListener(new JTextFieldHintListener(serviceImplNameField, "eg:DbTable" + tableConfig.getServiceImplPostfix()));
+            } else {
+                serviceImplNameField.addFocusListener(new JTextFieldHintListener(serviceImplNameField, "eg:DbTable" + "Service"));
+            }
+        } else {
+            serviceImplNameField.setText(getServiceImplName(modelName));
+        }
+
+        serviceImplNamePanel.setVisible(tableConfig.isUseService());
+
 
         JPanel basePackagePanel = new JPanel();
         basePackagePanel.setLayout(new BoxLayout(basePackagePanel, BoxLayout.X_AXIS));
@@ -571,6 +651,8 @@ public class GenerateSettingUI extends DialogWrapper {
                 domainPackageField.setText(packageName + ".model");
                 mapperPackageField.setText(packageName + "." + getMapperPostfix().toLowerCase());
                 examplePackageField.setText(packageName + "." + getExamplePostfix().toLowerCase());
+                servicePackageField.setText(packageName + "." + getServicePostfix().toLowerCase());
+                serviceImplPackageField.setText(packageName + "." + getServicePostfix().toLowerCase() + ".impl");
             }
         });
         basePackageField.addKeyListener(new KeyAdapter() {
@@ -579,6 +661,8 @@ public class GenerateSettingUI extends DialogWrapper {
                 domainPackageField.setText(basePackageField.getText() + ".model");
                 mapperPackageField.setText(basePackageField.getText() + "." + getMapperPostfix().toLowerCase());
                 examplePackageField.setText(basePackageField.getText() + "." + getExamplePostfix().toLowerCase());
+                servicePackageField.setText(basePackageField.getText() + "." + getServicePostfix().toLowerCase());
+                serviceImplPackageField.setText(basePackageField.getText() + "." + getServicePostfix().toLowerCase() + ".impl");
             }
         });
         if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getBasePackage())) {
@@ -728,6 +812,74 @@ public class GenerateSettingUI extends DialogWrapper {
         xmlPackagePanel.add(xmlPackageLabel);
         xmlPackagePanel.add(xmlPackageField);
 
+        // 实体类目录设置
+        serviceModuleRootPathPanel.setLayout(new BoxLayout(serviceModuleRootPathPanel, BoxLayout.X_AXIS));
+        JBLabel serviceModuleRootLabel = new JBLabel("Service Root:");
+        serviceModuleRootLabel.setPreferredSize(new Dimension(150, 20));
+        serviceModuleRootField.addBrowseFolderListener(new TextBrowseFolderListener(FileChooserDescriptorFactory.createSingleFolderDescriptor()) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                super.actionPerformed(e);
+                serviceModuleRootField.setText(serviceModuleRootField.getText().replaceAll("\\\\", "/"));
+            }
+        });
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getModuleRootPath())) {
+            serviceModuleRootField.setText(tableConfig.getModuleRootPath());
+        } else {
+            serviceModuleRootField.setText(project.getBasePath());
+        }
+        serviceModuleRootPathPanel.add(serviceModuleRootLabel);
+        serviceModuleRootPathPanel.add(serviceModuleRootField);
+        serviceModuleRootPathPanel.setVisible(tableConfig.isUseService());
+
+        servicePackagePanel = new JPanel();
+        servicePackagePanel.setLayout(new BoxLayout(servicePackagePanel, BoxLayout.X_AXIS));
+        JBLabel servicePackageLabel = new JBLabel("Service Package:");
+        servicePackageField = new EditorTextFieldWithBrowseButton(project, false);
+        servicePackageLabel.setPreferredSize(new Dimension(150, 10));
+        servicePackageField.addActionListener(e -> {
+            final PackageChooserDialog chooser = new PackageChooserDialog("Select Service Package", project);
+            chooser.selectPackage(servicePackageField.getText());
+            chooser.show();
+            final PsiPackage psiPackage = chooser.getSelectedPackage();
+            String packageName = psiPackage == null ? null : psiPackage.getQualifiedName();
+            if (!StringUtils.isEmpty(packageName)) {
+                servicePackageField.setText(packageName);
+            }
+        });
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getServicePackage())) {
+            servicePackageField.setText(tableConfig.getServicePackage());
+        } else {
+            servicePackageField.setText("");
+        }
+        servicePackagePanel.add(servicePackageLabel);
+        servicePackagePanel.add(servicePackageField);
+        servicePackagePanel.setVisible(tableConfig.isUseService());
+
+        serviceImplPackagePanel = new JPanel();
+        serviceImplPackagePanel.setLayout(new BoxLayout(serviceImplPackagePanel, BoxLayout.X_AXIS));
+        JBLabel serviceImplPackageLabel = new JBLabel("Service Impl Package:");
+        serviceImplPackageField = new EditorTextFieldWithBrowseButton(project, false);
+        serviceImplPackageLabel.setPreferredSize(new Dimension(150, 10));
+        serviceImplPackageField.addActionListener(e -> {
+            final PackageChooserDialog chooser = new PackageChooserDialog("Select Service Impl Package", project);
+            chooser.selectPackage(serviceImplPackageField.getText());
+            chooser.show();
+            final PsiPackage psiPackage = chooser.getSelectedPackage();
+            String packageName = psiPackage == null ? null : psiPackage.getQualifiedName();
+            if (!StringUtils.isEmpty(packageName)) {
+                serviceImplPackageField.setText(packageName);
+            }
+        });
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getServiceImplPackage())) {
+            serviceImplPackageField.setText(tableConfig.getServiceImplPackage());
+        } else {
+            serviceImplPackageField.setText("");
+        }
+        serviceImplPackagePanel.add(serviceImplPackageLabel);
+        serviceImplPackagePanel.add(serviceImplPackageField);
+        serviceImplPackagePanel.setVisible(tableConfig.isUseService());
+
         // 自定义注释
         JPanel authorPanel = new JPanel();
         authorPanel.setLayout(new BoxLayout(authorPanel, BoxLayout.X_AXIS));
@@ -800,6 +952,8 @@ public class GenerateSettingUI extends DialogWrapper {
         domainPanel.add(domainNamePanel);
         domainPanel.add(mapperNamePanel);
         domainPanel.add(exampleNamePanel);
+        domainPanel.add(serviceNamePanel);
+        domainPanel.add(serviceImplNamePanel);
         generalPanel.add(domainPanel);
 
         generalPanel.add(new TitledSeparator("Package"));
@@ -813,6 +967,9 @@ public class GenerateSettingUI extends DialogWrapper {
         packagePanel.add(mapperModuleRootPanel);
         packagePanel.add(mapperPackagePanel);
         packagePanel.add(examplePackagePanel);
+        packagePanel.add(serviceModuleRootPathPanel);
+        packagePanel.add(servicePackagePanel);
+        packagePanel.add(serviceImplPackagePanel);
         packagePanel.add(xmlModuleRootPanel);
         packagePanel.add(xmlPackagePanel);
         generalPanel.add(packagePanel);
@@ -820,7 +977,7 @@ public class GenerateSettingUI extends DialogWrapper {
         tabpanel.add(generalPanel);
     }
 
-    public void generate(RawConnectionConfig connectionConfig) {
+    public void generate(RawConnectionConfig connectionConfig) throws IOException, XMLParserException {
         tableConfig.setName(tableNameField.getText());
         tableConfig.setTableName(tableNameField.getText());
         tableConfig.setModuleRootPath(moduleRootField.getText());
@@ -863,6 +1020,12 @@ public class GenerateSettingUI extends DialogWrapper {
         tableConfig.setVersion(versionField.getText());
         tableConfig.setDescription(descriptionField.getText());
 
+        tableConfig.setServicePackage(servicePackageField.getText());
+        tableConfig.setServiceModuleRootPath(serviceModuleRootField.getText());
+        tableConfig.setServiceImplPackage(serviceImplPackageField.getText());
+        tableConfig.setServiceName(serviceNameField.getText());
+        tableConfig.setUseService(useServiceBox.getSelectedObjects() != null);
+
         new MyBatisGenerateCommand(tableConfig).execute(project, connectionConfig);
 
     }
@@ -899,11 +1062,35 @@ public class GenerateSettingUI extends DialogWrapper {
         }
     }
 
+    private String getServicePostfix() {
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getServicePostfix())) {
+            return tableConfig.getServicePostfix();
+        } else {
+            return "Service";
+        }
+    }
+
     private String getExampleName(String entityName) {
         if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getExamplePostfix())) {
             return entityName + tableConfig.getExamplePostfix();
         } else {
             return (entityName + "Example");
+        }
+    }
+
+    private String getServiceName(String entityName) {
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getServicePostfix())) {
+            return entityName + tableConfig.getServicePostfix();
+        } else {
+            return (entityName + "Service");
+        }
+    }
+
+    private String getServiceImplName(String entityName) {
+        if (tableConfig != null && !StringUtils.isEmpty(tableConfig.getServiceImplPostfix())) {
+            return entityName + tableConfig.getServiceImplPostfix();
+        } else {
+            return (entityName + "ServiceImpl");
         }
     }
 

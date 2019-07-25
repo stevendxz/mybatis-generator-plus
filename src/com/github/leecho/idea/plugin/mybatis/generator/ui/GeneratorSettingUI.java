@@ -33,10 +33,13 @@ public class GeneratorSettingUI extends JDialog {
     private EditorTextFieldWithBrowseButton mapperPackageField;
     private JTextField xmlPackageField = new JTextField();
     private EditorTextFieldWithBrowseButton examplePackageField;
+    private EditorTextFieldWithBrowseButton servicePackageField;
+    private EditorTextFieldWithBrowseButton serviceImplPackageField;
     private TextFieldWithBrowseButton moduleRootField = new TextFieldWithBrowseButton();
     private TextFieldWithBrowseButton entityModuleRootField = new TextFieldWithBrowseButton();
     private TextFieldWithBrowseButton mapperModuleRootField = new TextFieldWithBrowseButton();
     private TextFieldWithBrowseButton xmlModuleRootField = new TextFieldWithBrowseButton();
+    private TextFieldWithBrowseButton serviceModuleRootField = new TextFieldWithBrowseButton();
 
     private JTextField sourcePathField = new JTextField();
     private JTextField resourcePathField = new JTextField();
@@ -48,6 +51,8 @@ public class GeneratorSettingUI extends JDialog {
     private JTextField modelPostfixField = new JTextField(10);
     private JTextField mapperPostfixField = new JTextField(10);
     private JTextField examplePostfixField = new JTextField(10);
+    private JTextField servicePostfixField = new JTextField(10);
+    private JTextField serviceImplPostfixField = new JTextField(10);
 
     private JCheckBox offsetLimitBox = new JCheckBox("Pageable");
     private JCheckBox commentBox = new JCheckBox("Comment");
@@ -66,6 +71,7 @@ public class GeneratorSettingUI extends JDialog {
     private JCheckBox lombokAnnotationBox = new JCheckBox("Lombok");
     private JCheckBox lombokBuilderAnnotationBox = new JCheckBox("Lombok Builder");
     private JCheckBox swaggerAnnotationBox = new JCheckBox("Swagger Model");
+    private JCheckBox useServiceBox = new JCheckBox("Use Service");
 
 
     private MyBatisGeneratorConfiguration config;
@@ -138,6 +144,7 @@ public class GeneratorSettingUI extends JDialog {
         optionsPanel.add(lombokAnnotationBox);
         optionsPanel.add(lombokBuilderAnnotationBox);
         optionsPanel.add(swaggerAnnotationBox);
+        optionsPanel.add(useServiceBox);
 
         TitledSeparator separator = new TitledSeparator();
         separator.setText("Options");
@@ -238,6 +245,23 @@ public class GeneratorSettingUI extends JDialog {
         examplePostfixPanel.add(examplePostfixLabel);
         examplePostfixPanel.add(examplePostfixField);
 
+        // Service类 后缀设置
+        JPanel servicePostfixPanel = new JPanel();
+        servicePostfixPanel.setLayout(new BoxLayout(servicePostfixPanel, BoxLayout.X_AXIS));
+        JBLabel servicePostfixLabel = new JBLabel("Service Postfix:");
+        servicePostfixLabel.setPreferredSize(new Dimension(200, 20));
+        servicePostfixPanel.add(servicePostfixLabel);
+        servicePostfixPanel.add(servicePostfixField);
+
+        // Service Impl类 后缀设置
+        JPanel serviceImplPostfixPanel = new JPanel();
+        serviceImplPostfixPanel.setLayout(new BoxLayout(serviceImplPostfixPanel, BoxLayout.X_AXIS));
+        JBLabel serviceImplPostfixLabel = new JBLabel("Service Impl Postfix:");
+        serviceImplPostfixLabel.setPreferredSize(new Dimension(200, 20));
+        serviceImplPostfixPanel.add(serviceImplPostfixLabel);
+        serviceImplPostfixPanel.add(serviceImplPostfixField);
+
+
         JPanel postfixPanel = new JPanel();
         postfixPanel.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
         TitledSeparator separator2 = new TitledSeparator();
@@ -245,6 +269,8 @@ public class GeneratorSettingUI extends JDialog {
         postfixPanel.add(modelPostfixPanel);
         postfixPanel.add(mapperPostfixPanel);
         postfixPanel.add(examplePostfixPanel);
+        postfixPanel.add(servicePostfixPanel);
+        postfixPanel.add(serviceImplPostfixPanel);
         contentPanel.add(separator2);
         contentPanel.add(postfixPanel);
     }
@@ -370,7 +396,7 @@ public class GeneratorSettingUI extends JDialog {
         // 实体类目录设置
         JPanel xmlModuleRootPanel = new JPanel();
         xmlModuleRootPanel.setLayout(new BoxLayout(xmlModuleRootPanel, BoxLayout.X_AXIS));
-        JBLabel xmlModuleRootLabel = new JBLabel("Example Root:");
+        JBLabel xmlModuleRootLabel = new JBLabel("Xml Root:");
         xmlModuleRootLabel.setPreferredSize(new Dimension(200, 20));
         xmlModuleRootField.addBrowseFolderListener(new TextBrowseFolderListener(FileChooserDescriptorFactory.createSingleFolderDescriptor()) {
             @Override
@@ -396,6 +422,60 @@ public class GeneratorSettingUI extends JDialog {
         xmlPackagePanel.add(xmlPackageLabel);
         xmlPackagePanel.add(xmlPackageField);
 
+        // 实体类目录设置
+        JPanel serviceModuleRootPanel = new JPanel();
+        serviceModuleRootPanel.setLayout(new BoxLayout(serviceModuleRootPanel, BoxLayout.X_AXIS));
+        JBLabel serviceModuleRootLabel = new JBLabel("Service Root:");
+        serviceModuleRootLabel.setPreferredSize(new Dimension(200, 20));
+        serviceModuleRootField.addBrowseFolderListener(new TextBrowseFolderListener(FileChooserDescriptorFactory.createSingleFolderDescriptor()) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                super.actionPerformed(e);
+                serviceModuleRootField.setText(serviceModuleRootField.getText().replaceAll("\\\\", "/"));
+            }
+        });
+        if (globalConfig != null && !StringUtils.isEmpty(globalConfig.getModuleRootPath())) {
+            serviceModuleRootField.setText(globalConfig.getModuleRootPath());
+        } else {
+            serviceModuleRootField.setText(project.getBasePath());
+        }
+        serviceModuleRootPanel.add(serviceModuleRootLabel);
+        serviceModuleRootPanel.add(serviceModuleRootField);
+
+        // mapper类包路径设置
+        JPanel servicePackagePanel = new JPanel();
+        servicePackagePanel.setLayout(new BoxLayout(servicePackagePanel, BoxLayout.X_AXIS));
+        JLabel servicePackageLabel = new JLabel("Service Package:");
+        servicePackageLabel.setPreferredSize(new Dimension(200, 20));
+        servicePackageField = new EditorTextFieldWithBrowseButton(project, false);
+        servicePackageField.addActionListener(e -> {
+            final PackageChooserDialog packageChooserDialog = new PackageChooserDialog("Select Service Package", project);
+            packageChooserDialog.selectPackage(servicePackageField.getText());
+            packageChooserDialog.show();
+            final PsiPackage psiPackage = packageChooserDialog.getSelectedPackage();
+            String packageName = psiPackage == null ? null : psiPackage.getQualifiedName();
+            servicePackageField.setText(packageName);
+        });
+        servicePackagePanel.add(servicePackageLabel);
+        servicePackagePanel.add(servicePackageField);
+
+        // mapper类包路径设置
+        JPanel serviceImplPackagePanel = new JPanel();
+        serviceImplPackagePanel.setLayout(new BoxLayout(serviceImplPackagePanel, BoxLayout.X_AXIS));
+        JLabel serviceImplPackageLabel = new JLabel("Service Impl Package:");
+        serviceImplPackageLabel.setPreferredSize(new Dimension(200, 20));
+        serviceImplPackageField = new EditorTextFieldWithBrowseButton(project, false);
+        serviceImplPackageField.addActionListener(e -> {
+            final PackageChooserDialog packageChooserDialog = new PackageChooserDialog("Select Service Impl Package", project);
+            packageChooserDialog.selectPackage(serviceImplPackageField.getText());
+            packageChooserDialog.show();
+            final PsiPackage psiPackage = packageChooserDialog.getSelectedPackage();
+            String packageName = psiPackage == null ? null : psiPackage.getQualifiedName();
+            serviceImplPackageField.setText(packageName);
+        });
+        serviceImplPackagePanel.add(serviceImplPackageLabel);
+        serviceImplPackagePanel.add(serviceImplPackageField);
+
         JPanel packagePanel = new JPanel();
         packagePanel.setLayout(new VerticalFlowLayout(VerticalFlowLayout.TOP));
         packagePanel.add(projectRootPanel);
@@ -405,6 +485,9 @@ public class GeneratorSettingUI extends JDialog {
         packagePanel.add(mapperPackagePanel);
         packagePanel.add(examplePackagePanel);
         packagePanel.add(xmlPackagePanel);
+        packagePanel.add(serviceModuleRootPanel);
+        packagePanel.add(servicePackagePanel);
+        packagePanel.add(serviceImplPackagePanel);
 
         TitledSeparator separator = new TitledSeparator();
         separator.setText("Package");
@@ -444,6 +527,11 @@ public class GeneratorSettingUI extends JDialog {
         modified |= (this.swaggerAnnotationBox.getSelectedObjects() != null) == (config.getGlobalConfig().isSwaggerAnnotation());
         modified |= !this.authorField.getText().equals(config.getGlobalConfig().getAuthor());
         modified |= !this.versionField.getText().equals(config.getGlobalConfig().getVersion());
+        modified |= !this.serviceModuleRootField.getText().equals(config.getGlobalConfig().getServiceModuleRootPath());
+        modified |= !this.servicePackageField.getText().equals(config.getGlobalConfig().getServicePackage());
+        modified |= !this.servicePostfixField.getText().equals(config.getGlobalConfig().getServicePostfix());
+        modified |= !this.serviceImplPostfixField.getText().equals(config.getGlobalConfig().getServiceImplPostfix());
+        modified |= !this.serviceImplPackageField.getText().equals(config.getGlobalConfig().getServiceImplPackage());
         return modified;
     }
 
@@ -483,6 +571,12 @@ public class GeneratorSettingUI extends JDialog {
         globalConfig.setResourcePath(resourcePathField.getText());
         globalConfig.setAuthor(authorField.getText());
         globalConfig.setVersion(versionField.getText());
+
+        globalConfig.setServicePostfix(servicePostfixField.getText());
+        globalConfig.setServiceImplPostfix(serviceImplPostfixField.getText());
+        globalConfig.setServiceModuleRootPath(serviceModuleRootField.getText());
+        globalConfig.setServicePackage(servicePackageField.getText());
+        globalConfig.setServiceImplPackage(serviceImplPackageField.getText());
 
         this.config.setGlobalConfig(globalConfig);
 
@@ -526,6 +620,12 @@ public class GeneratorSettingUI extends JDialog {
 
         authorField.setText(globalConfig.getAuthor());
         versionField.setText(globalConfig.getVersion());
+
+        servicePostfixField.setText(globalConfig.getServicePostfix());
+        serviceImplPostfixField.setText(globalConfig.getServiceImplPostfix());
+        servicePackageField.setText(globalConfig.getServicePackage());
+        serviceModuleRootField.setText(globalConfig.getServiceModuleRootPath());
+        serviceImplPackageField.setText(globalConfig.getServiceImplPackage());
 
     }
 
